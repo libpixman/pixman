@@ -212,7 +212,8 @@ typedef void      (* pixman_iter_write_back_t)   (pixman_iter_t *iter);
 
 typedef enum
 {
-    ITER_NARROW =		(1 << 0),
+    ITER_NARROW =               (1 << 0),
+    ITER_WIDE =                 (1 << 1),
 
     /* "Localized alpha" is when the alpha channel is used only to compute
      * the alpha value of the destination. This means that the computation
@@ -229,15 +230,15 @@ typedef enum
      * we can treat it as if it were ARGB, which means in some cases we can
      * avoid copying it to a temporary buffer.
      */
-    ITER_LOCALIZED_ALPHA =	(1 << 1),
-    ITER_IGNORE_ALPHA =		(1 << 2),
-    ITER_IGNORE_RGB =		(1 << 3),
+    ITER_LOCALIZED_ALPHA =	(1 << 2),
+    ITER_IGNORE_ALPHA =		(1 << 3),
+    ITER_IGNORE_RGB =		(1 << 4),
 
     /* These indicate whether the iterator is for a source
      * or a destination image
      */
-    ITER_SRC =			(1 << 4),
-    ITER_DEST =			(1 << 5)
+    ITER_SRC =			(1 << 5),
+    ITER_DEST =			(1 << 6)
 } iter_flags_t;
 
 struct pixman_iter_t

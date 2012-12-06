@@ -116,7 +116,7 @@ general_composite_rect  (pixman_implementation_t *imp,
     pixman_iter_t src_iter, mask_iter, dest_iter;
     pixman_combine_32_func_t compose;
     pixman_bool_t component_alpha;
-    iter_flags_t narrow, src_iter_flags;
+    iter_flags_t width_flag, src_iter_flags;
     int Bpp;
     int i;
 
@@ -124,12 +124,12 @@ general_composite_rect  (pixman_implementation_t *imp,
 	(!mask_image || mask_image->common.flags & FAST_PATH_NARROW_FORMAT) &&
 	(dest_image->common.flags & FAST_PATH_NARROW_FORMAT))
     {
-	narrow = ITER_NARROW;
+	width_flag = ITER_NARROW;
 	Bpp = 4;
     }
     else
     {
-	narrow = 0;
+	width_flag = ITER_WIDE;
 	Bpp = 16;
     }
 
@@ -145,7 +145,7 @@ general_composite_rect  (pixman_implementation_t *imp,
     mask_buffer = src_buffer + width * Bpp;
     dest_buffer = mask_buffer + width * Bpp;
 
-    if (!narrow)
+    if (width_flag == ITER_WIDE)
     {
 	/* To make sure there aren't any NANs in the buffers */
 	memset (src_buffer, 0, width * Bpp);
@@ -154,7 +154,7 @@ general_composite_rect  (pixman_implementation_t *imp,
     }
     
     /* src iter */
-    src_iter_flags = narrow | op_flags[op].src | ITER_SRC;
+    src_iter_flags = width_flag | op_flags[op].src | ITER_SRC;
 
     _pixman_implementation_src_iter_init (imp->toplevel, &src_iter, src_image,
 					  src_x, src_y, width, height,
@@ -179,18 +179,16 @@ general_composite_rect  (pixman_implementation_t *imp,
     _pixman_implementation_src_iter_init (
 	imp->toplevel, &mask_iter,
 	mask_image, mask_x, mask_y, width, height, mask_buffer,
-	ITER_SRC | narrow | (component_alpha? 0 : ITER_IGNORE_RGB),
+	ITER_SRC | width_flag | (component_alpha? 0 : ITER_IGNORE_RGB),
 	info->mask_flags);
 
     /* dest iter */
     _pixman_implementation_dest_iter_init (
-	imp->toplevel, &dest_iter,
-	dest_image, dest_x, dest_y, width, height, dest_buffer,
-	ITER_DEST | narrow | op_flags[op].dst,
-	info->dest_flags);
+	imp->toplevel, &dest_iter, dest_image, dest_x, dest_y, width, height,
+	dest_buffer, ITER_DEST | width_flag | op_flags[op].dst, info->dest_flags);
 
     compose = _pixman_implementation_lookup_combiner (
-	imp->toplevel, op, component_alpha, narrow);
+	imp->toplevel, op, component_alpha, width_flag != ITER_WIDE);
 
     for (i = 0; i < height; ++i)
     {
