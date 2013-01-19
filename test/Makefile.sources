@@ -6,6 +6,7 @@ TESTPROGRAMS =			\
 	region-test		\
 	region-translate-test	\
 	combiner-test		\
+	pixel-test		\
 	fetch-test		\
 	rotate-test		\
 	oob-test		\
