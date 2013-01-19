@@ -189,6 +189,14 @@ typedef struct
 } color_t;
 
 void
+do_composite (pixman_op_t op,
+	      const color_t *src,
+	      const color_t *mask,
+	      const color_t *dst,
+	      color_t *result,
+	      pixman_bool_t component_alpha);
+
+void
 round_color (pixman_format_code_t format, color_t *color);
 
 typedef struct
