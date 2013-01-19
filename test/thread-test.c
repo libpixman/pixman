@@ -183,7 +183,7 @@ main (void)
 
     crc32 = compute_crc32 (0, crc32s, sizeof crc32s);
 
-#define EXPECTED 0xE299B18E
+#define EXPECTED 0xE8D161DF
 
     if (crc32 != EXPECTED)
     {

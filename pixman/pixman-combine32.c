@@ -571,6 +571,15 @@ combine_multiply_ca (pixman_implementation_t *imp,
     }
 }
 
+#define CLAMP(v, low, high)						\
+    do									\
+    {									\
+	if (v < (low))							\
+	    v = (low);							\
+	if (v > (high))							\
+	    v = (high);							\
+    } while (0)
+
 #define PDF_SEPARABLE_BLEND_MODE(name)					\
     static void								\
     combine_ ## name ## _u (pixman_implementation_t *imp,		\
@@ -589,16 +598,28 @@ combine_multiply_ca (pixman_implementation_t *imp,
 	    uint8_t isa = ~sa;						\
 	    uint8_t da = ALPHA_8 (d);					\
 	    uint8_t ida = ~da;						\
-	    uint32_t result;						\
-									\
-	    result = d;							\
-	    UN8x4_MUL_UN8_ADD_UN8x4_MUL_UN8 (result, isa, s, ida);	\
+	    int32_t ra, rr, rg, rb;					\
 	    								\
-	    *(dest + i) = result +					\
-		(DIV_ONE_UN8 (sa * (uint32_t)da) << A_SHIFT) +		\
-		(blend_ ## name (RED_8 (d), da, RED_8 (s), sa) << R_SHIFT) + \
-		(blend_ ## name (GREEN_8 (d), da, GREEN_8 (s), sa) << G_SHIFT) + \
-		(blend_ ## name (BLUE_8 (d), da, BLUE_8 (s), sa));	\
+	    ra = da * 0xff + sa * 0xff - sa * da;			\
+	    rr = isa * RED_8 (d) + ida * RED_8 (s);			\
+	    rg = isa * GREEN_8 (d) + ida * GREEN_8 (s);			\
+	    rb = isa * BLUE_8 (d) + ida * BLUE_8 (s);			\
+									\
+	    rr += blend_ ## name (RED_8 (d), da, RED_8 (s), sa);	\
+	    rg += blend_ ## name (GREEN_8 (d), da, GREEN_8 (s), sa);    \
+	    rb += blend_ ## name (BLUE_8 (d), da, BLUE_8 (s), sa);	\
+                                                                        \
+	    CLAMP (ra, 0, 255 * 255);				        \
+	    CLAMP (rr, 0, 255 * 255);				        \
+	    CLAMP (rg, 0, 255 * 255);				        \
+	    CLAMP (rb, 0, 255 * 255);				        \
+									\
+	    ra = DIV_ONE_UN8 (ra);					\
+	    rr = DIV_ONE_UN8 (rr);					\
+	    rg = DIV_ONE_UN8 (rg);					\
+	    rb = DIV_ONE_UN8 (rb);					\
+									\
+	    *(dest + i) = ra << 24 | rr << 16 | rg << 8 | rb;		\
 	}								\
     }									\
     									\
@@ -618,20 +639,30 @@ combine_multiply_ca (pixman_implementation_t *imp,
 	    uint32_t d = *(dest + i);					\
 	    uint8_t da = ALPHA_8 (d);					\
 	    uint8_t ida = ~da;						\
-	    uint32_t result;						\
-            								\
-	    combine_mask_ca (&s, &m);					\
-            								\
-	    result = d;							\
-	    UN8x4_MUL_UN8x4_ADD_UN8x4_MUL_UN8 (result, ~m, s, ida);     \
-            								\
-	    result +=							\
-	        (DIV_ONE_UN8 (ALPHA_8 (m) * (uint32_t)da) << A_SHIFT) +	\
-	        (blend_ ## name (RED_8 (d), da, RED_8 (s), RED_8 (m)) << R_SHIFT) + \
-	        (blend_ ## name (GREEN_8 (d), da, GREEN_8 (s), GREEN_8 (m)) << G_SHIFT) + \
-	        (blend_ ## name (BLUE_8 (d), da, BLUE_8 (s), BLUE_8 (m))); \
+	    int32_t ra, rr, rg, rb;					\
 	    								\
-	    *(dest + i) = result;					\
+	    combine_mask_ca (&s, &m);					\
+	    								\
+	    ra = da * 0xff + ALPHA_8 (s) * 0xff - ALPHA_8 (s) * da;	\
+	    rr = (~RED_8 (m)) * RED_8 (d) + ida * RED_8 (s);		\
+	    rg = (~GREEN_8 (m)) * GREEN_8 (d) + ida * GREEN_8 (s);	\
+	    rb = (~BLUE_8 (m)) * BLUE_8 (d) + ida * BLUE_8 (s);		\
+									\
+	    rr += blend_ ## name (RED_8 (d), da, RED_8 (s), RED_8 (m));	\
+	    rg += blend_ ## name (GREEN_8 (d), da, GREEN_8 (s), GREEN_8 (m)); \
+	    rb += blend_ ## name (BLUE_8 (d), da, BLUE_8 (s), BLUE_8 (m)); \
+									\
+	    CLAMP (ra, 0, 255 * 255);				        \
+	    CLAMP (rr, 0, 255 * 255);				        \
+	    CLAMP (rg, 0, 255 * 255);				        \
+	    CLAMP (rb, 0, 255 * 255);				        \
+									\
+	    ra = DIV_ONE_UN8 (ra);					\
+	    rr = DIV_ONE_UN8 (rr);					\
+	    rg = DIV_ONE_UN8 (rg);					\
+	    rb = DIV_ONE_UN8 (rb);					\
+									\
+	    *(dest + i) = ra << 24 | rr << 16 | rg << 8 | rb;		\
 	}								\
     }
 
@@ -642,10 +673,10 @@ combine_multiply_ca (pixman_implementation_t *imp,
  *    = ad * as * (d/ad + s/as - s/as * d/ad)
  *    = ad * s + as * d - s * d
  */
-static inline uint32_t
-blend_screen (uint32_t d, uint32_t ad, uint32_t s, uint32_t as)
+static inline int32_t
+blend_screen (int32_t d, int32_t ad, int32_t s, int32_t as)
 {
-    return DIV_ONE_UN8 (s * ad + d * as - s * d);
+    return s * ad + d * as - s * d;
 }
 
 PDF_SEPARABLE_BLEND_MODE (screen)
@@ -672,8 +703,8 @@ PDF_SEPARABLE_BLEND_MODE (screen)
  *     else
  *         as * ad - 2 * (ad - d) * (as - s)
  */
-static inline uint32_t
-blend_overlay (uint32_t d, uint32_t ad, uint32_t s, uint32_t as)
+static inline int32_t
+blend_overlay (int32_t d, int32_t ad, int32_t s, int32_t as)
 {
     uint32_t r;
 
@@ -682,7 +713,7 @@ blend_overlay (uint32_t d, uint32_t ad, uint32_t s, uint32_t as)
     else
 	r = as * ad - 2 * (ad - d) * (as - s);
 
-    return DIV_ONE_UN8 (r);
+    return r;
 }
 
 PDF_SEPARABLE_BLEND_MODE (overlay)
@@ -694,13 +725,13 @@ PDF_SEPARABLE_BLEND_MODE (overlay)
  *   = ad * as * MIN(d/ad, s/as)
  *   = MIN (as * d, ad * s)
  */
-static inline uint32_t
-blend_darken (uint32_t d, uint32_t ad, uint32_t s, uint32_t as)
+static inline int32_t
+blend_darken (int32_t d, int32_t ad, int32_t s, int32_t as)
 {
     s = ad * s;
     d = as * d;
 
-    return DIV_ONE_UN8 (s > d ? d : s);
+    return s > d ? d : s;
 }
 
 PDF_SEPARABLE_BLEND_MODE (darken)
@@ -712,13 +743,13 @@ PDF_SEPARABLE_BLEND_MODE (darken)
  *   = ad * as * MAX(d/ad, s/as)
  *   = MAX (as * d, ad * s)
  */
-static inline uint32_t
-blend_lighten (uint32_t d, uint32_t ad, uint32_t s, uint32_t as)
+static inline int32_t
+blend_lighten (int32_t d, int32_t ad, int32_t s, int32_t as)
 {
     s = ad * s;
     d = as * d;
     
-    return DIV_ONE_UN8 (s > d ? s : d);
+    return s > d ? s : d;
 }
 
 PDF_SEPARABLE_BLEND_MODE (lighten)
@@ -741,17 +772,17 @@ PDF_SEPARABLE_BLEND_MODE (lighten)
  *         as * (as * d / (as - s))
  *
  */
-static inline uint32_t
-blend_color_dodge (uint32_t d, uint32_t ad, uint32_t s, uint32_t as)
+static inline int32_t
+blend_color_dodge (int32_t d, int32_t ad, int32_t s, int32_t as)
 {
     if (d == 0)
         return 0;
     else if (as * d >= ad * (as - s))
-	return DIV_ONE_UN8 (as * ad);
+	return as * ad;
     else if (as - s == 0)
-        return DIV_ONE_UN8 (as * ad);
+        return as * ad;
     else
-        return DIV_ONE_UN8 (as * ((d * as) / ((as - s))));
+        return as * ((d * as) / ((as - s)));
 }
 
 PDF_SEPARABLE_BLEND_MODE (color_dodge)
@@ -777,16 +808,16 @@ PDF_SEPARABLE_BLEND_MODE (color_dodge)
  *         ad * as  - as * as * (ad - d) / s
  */
 static inline uint32_t
-blend_color_burn (uint32_t d, uint32_t ad, uint32_t s, uint32_t as)
+blend_color_burn (int32_t d, int32_t ad, int32_t s, int32_t as)
 {
     if (d >= ad)
-	return DIV_ONE_UN8 (ad * as);
+	return ad * as;
     else if (as * ad - as * d >= ad * s)
 	return 0;
     else if (s == 0)
 	return 0;
     else
-	return DIV_ONE_UN8 (ad * as - (as * as * (ad - d)) / s);
+	return ad * as - (as * as * (ad - d)) / s;
 }
 
 PDF_SEPARABLE_BLEND_MODE (color_burn)
@@ -808,13 +839,13 @@ PDF_SEPARABLE_BLEND_MODE (color_burn)
  *     else
  *         as * ad - 2 * (ad - d) * (as - s)
  */
-static inline uint32_t
-blend_hard_light (uint32_t d, uint32_t ad, uint32_t s, uint32_t as)
+static inline int32_t
+blend_hard_light (int32_t d, int32_t ad, int32_t s, int32_t as)
 {
     if (2 * s < as)
-	return DIV_ONE_UN8 (2 * s * d);
+	return 2 * s * d;
     else
-	return DIV_ONE_UN8 (as * ad - 2 * (ad - d) * (as - s));
+	return as * ad - 2 * (ad - d) * (as - s);
 }
 
 PDF_SEPARABLE_BLEND_MODE (hard_light)
@@ -836,11 +867,11 @@ PDF_SEPARABLE_BLEND_MODE (hard_light)
  *     else
  *         d * as + (sqrt (d * ad) - d) * (2 * s - as);
  */
-static inline uint32_t
-blend_soft_light (uint32_t d_org,
-		  uint32_t ad_org,
-		  uint32_t s_org,
-		  uint32_t as_org)
+static inline int32_t
+blend_soft_light (int32_t d_org,
+		  int32_t ad_org,
+		  int32_t s_org,
+		  int32_t as_org)
 {
     double d = d_org * (1.0 / MASK);
     double ad = ad_org * (1.0 / MASK);
@@ -868,7 +899,8 @@ blend_soft_light (uint32_t d_org,
     {
 	r = d * as + (sqrt (d * ad) - d) * (2 * s - as);
     }
-    return r * MASK + 0.5;
+
+    return r * MASK * MASK + 0.5;
 }
 
 PDF_SEPARABLE_BLEND_MODE (soft_light)
@@ -887,16 +919,16 @@ PDF_SEPARABLE_BLEND_MODE (soft_light)
  *     else
  *        ad * s - as * d
  */
-static inline uint32_t
-blend_difference (uint32_t d, uint32_t ad, uint32_t s, uint32_t as)
+static inline int32_t
+blend_difference (int32_t d, int32_t ad, int32_t s, int32_t as)
 {
-    uint32_t das = d * as;
-    uint32_t sad = s * ad;
+    int32_t das = d * as;
+    int32_t sad = s * ad;
 
     if (sad < das)
-	return DIV_ONE_UN8 (das - sad);
+	return das - sad;
     else
-	return DIV_ONE_UN8 (sad - das);
+	return sad - das;
 }
 
 PDF_SEPARABLE_BLEND_MODE (difference)
@@ -912,10 +944,10 @@ PDF_SEPARABLE_BLEND_MODE (difference)
 /* This can be made faster by writing it directly and not using
  * PDF_SEPARABLE_BLEND_MODE, but that's a performance optimization */
 
-static inline uint32_t
-blend_exclusion (uint32_t d, uint32_t ad, uint32_t s, uint32_t as)
+static inline int32_t
+blend_exclusion (int32_t d, int32_t ad, int32_t s, int32_t as)
 {
-    return DIV_ONE_UN8 (s * ad + d * as - 2 * d * s);
+    return s * ad + d * as - 2 * d * s;
 }
 
 PDF_SEPARABLE_BLEND_MODE (exclusion)
