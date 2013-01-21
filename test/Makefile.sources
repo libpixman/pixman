@@ -28,8 +28,9 @@ TESTPROGRAMS =			\
 	$(NULL)
 
 # Benchmarks
-BENCHMARKS =			\
+OTHERPROGRAMS =                 \
 	lowlevel-blt-bench	\
+        check-formats           \
 	$(NULL)
 
 # Utility functions
