@@ -225,3 +225,7 @@ pixel_checker_get_min (const pixel_checker_t *checker, color_t *color,
 pixman_bool_t
 pixel_checker_check (const pixel_checker_t *checker,
 		     uint32_t pixel, color_t *color);
+
+void
+pixel_checker_convert_pixel_to_color (const pixel_checker_t *checker,
+                                      uint32_t pixel, color_t *color);

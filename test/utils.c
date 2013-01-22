@@ -1421,6 +1421,42 @@ pixel_checker_split_pixel (const pixel_checker_t *checker, uint32_t pixel,
     *b = (pixel & checker->bm) >> checker->bs;
 }
 
+void
+pixel_checker_convert_pixel_to_color (const pixel_checker_t *checker,
+                                      uint32_t pixel, color_t *color)
+{
+    int a, r, g, b;
+
+    pixel_checker_split_pixel (checker, pixel, &a, &r, &g, &b);
+
+    if (checker->am == 0)
+        color->a = 1.0;
+    else
+        color->a = a / (double)(checker->am >> checker->as);
+
+    if (checker->rm == 0)
+        color->r = 0.0;
+    else
+        color->r = r / (double)(checker->rm >> checker->rs);
+
+    if (checker->gm == 0)
+        color->g = 0.0;
+    else
+        color->g = g / (double)(checker->gm >> checker->gs);
+
+    if (checker->bm == 0)
+        color->b = 0.0;
+    else
+        color->b = b / (double)(checker->bm >> checker->bs);
+
+    if (PIXMAN_FORMAT_TYPE (checker->format) == PIXMAN_TYPE_ARGB_SRGB)
+    {
+	color->r = convert_srgb_to_linear (color->r);
+	color->g = convert_srgb_to_linear (color->g);
+	color->b = convert_srgb_to_linear (color->b);
+    }
+}
+
 static int32_t
 convert (double v, uint32_t width, uint32_t mask, uint32_t shift, double def)
 {
