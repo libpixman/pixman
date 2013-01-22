@@ -1513,7 +1513,7 @@ get_limits (const pixel_checker_t *checker, double limit,
 
 /* The acceptable deviation in units of [0.0, 1.0]
  */
-#define DEVIATION (0.004)
+#define DEVIATION (0.0064)
 
 void
 pixel_checker_get_max (const pixel_checker_t *checker, color_t *color,
