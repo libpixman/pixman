@@ -34,6 +34,7 @@ demos/composite-test
 demos/conical-test
 demos/convolution-test
 demos/gradient-test
+demos/linear-gradient
 demos/quad2quad
 demos/radial-test
 demos/scale
