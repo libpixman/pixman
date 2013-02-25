@@ -67,6 +67,7 @@ test/lowlevel-blt-bench
 test/oob-test
 test/pdf-op-test
 test/prng-test
+test/radial-perf-test
 test/region-contains-test
 test/region-test
 test/region-translate
