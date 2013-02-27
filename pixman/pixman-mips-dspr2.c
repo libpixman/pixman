@@ -48,6 +48,12 @@ PIXMAN_MIPS_BIND_FAST_PATH_SRC_DST (DO_FAST_MEMCPY, src_8888_8888,
                                     uint32_t, 1, uint32_t, 1)
 PIXMAN_MIPS_BIND_FAST_PATH_SRC_DST (DO_FAST_MEMCPY, src_0888_0888,
                                     uint8_t, 3, uint8_t, 3)
+#if defined(__MIPSEL__) || defined(__MIPSEL) || defined(_MIPSEL) || defined(MIPSEL)
+PIXMAN_MIPS_BIND_FAST_PATH_SRC_DST (0, src_0888_8888_rev,
+                                    uint8_t, 3, uint32_t, 1)
+PIXMAN_MIPS_BIND_FAST_PATH_SRC_DST (0, src_0888_0565_rev,
+                                    uint8_t, 3, uint16_t, 1)
+#endif
 PIXMAN_MIPS_BIND_FAST_PATH_SRC_DST (0, over_8888_8888,
                                     uint32_t, 1, uint32_t, 1)
 PIXMAN_MIPS_BIND_FAST_PATH_SRC_DST (0, over_8888_0565,
@@ -282,6 +288,10 @@ static const pixman_fast_path_t mips_dspr2_fast_paths[] =
     PIXMAN_STD_FAST_PATH (SRC, x8r8g8b8, null, a8r8g8b8, mips_composite_src_x888_8888),
     PIXMAN_STD_FAST_PATH (SRC, x8b8g8r8, null, a8b8g8r8, mips_composite_src_x888_8888),
     PIXMAN_STD_FAST_PATH (SRC, r8g8b8,   null, r8g8b8,   mips_composite_src_0888_0888),
+#if defined(__MIPSEL__) || defined(__MIPSEL) || defined(_MIPSEL) || defined(MIPSEL)
+    PIXMAN_STD_FAST_PATH (SRC, b8g8r8,   null, x8r8g8b8, mips_composite_src_0888_8888_rev),
+    PIXMAN_STD_FAST_PATH (SRC, b8g8r8,   null, r5g6b5,   mips_composite_src_0888_0565_rev),
+#endif
     PIXMAN_STD_FAST_PATH (SRC, solid,    a8,   a8r8g8b8, mips_composite_src_n_8_8888),
     PIXMAN_STD_FAST_PATH (SRC, solid,    a8,   x8r8g8b8, mips_composite_src_n_8_8888),
     PIXMAN_STD_FAST_PATH (SRC, solid,    a8,   a8b8g8r8, mips_composite_src_n_8_8888),

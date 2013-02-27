@@ -310,6 +310,395 @@ LEAF_MIPS_DSPR2(pixman_composite_src_x888_8888_asm_mips)
 
 END(pixman_composite_src_x888_8888_asm_mips)
 
+#if defined(__MIPSEL__) || defined(__MIPSEL) || defined(_MIPSEL) || defined(MIPSEL)
+LEAF_MIPS_DSPR2(pixman_composite_src_0888_8888_rev_asm_mips)
+/*
+ * a0 - dst (a8r8g8b8)
+ * a1 - src (b8g8r8)
+ * a2 - w
+ */
+
+    beqz              a2, 6f
+     nop
+
+    lui               t8, 0xff00;
+    srl               t9, a2, 2   /* t9 = how many multiples of 4 src pixels */
+    beqz              t9, 4f      /* branch if less than 4 src pixels */
+     nop
+
+    li                t0, 0x1
+    li                t1, 0x2
+    li                t2, 0x3
+    andi              t3, a1, 0x3
+    beq               t3, t0, 1f
+     nop
+    beq               t3, t1, 2f
+     nop
+    beq               t3, t2, 3f
+     nop
+
+0:
+    beqz              t9, 4f
+     addiu            t9, t9, -1
+    lw                t0, 0(a1)            /* t0 = R2 | B1 | G1 | R1 */
+    lw                t1, 4(a1)            /* t1 = G3 | R3 | B2 | G2 */
+    lw                t2, 8(a1)            /* t2 = B4 | G4 | R4 | B3 */
+
+    addiu             a1, a1, 12
+    addiu             a2, a2, -4
+
+    wsbh              t0, t0               /* t0 = B1 | R2 | R1 | G1 */
+    wsbh              t1, t1               /* t1 = R3 | G3 | G2 | B2 */
+    wsbh              t2, t2               /* t2 = G4 | B4 | B3 | R4 */
+
+    packrl.ph         t3, t1, t0           /* t3 = G2 | B2 | B1 | R2 */
+    packrl.ph         t4, t0, t0           /* t4 = R1 | G1 | B1 | R2 */
+    rotr              t3, t3, 16           /* t3 = B1 | R2 | G2 | B2 */
+    or                t3, t3, t8           /* t3 = FF | R2 | G2 | B2 */
+    srl               t4, t4, 8            /* t4 =  0 | R1 | G1 | B1 */
+    or                t4, t4, t8           /* t4 = FF | R1 | G1 | B1 */
+    packrl.ph         t5, t2, t1           /* t5 = B3 | R4 | R3 | G3 */
+    rotr              t5, t5, 24           /* t5 = R4 | R3 | G3 | B3 */
+    or                t5, t5, t8           /* t5 = FF | R3 | G3 | B3 */
+    rotr              t2, t2, 16           /* t2 = B3 | R4 | G4 | B4 */
+    or                t2, t2, t8           /* t5 = FF | R3 | G3 | B3 */
+
+    sw                t4, 0(a0)
+    sw                t3, 4(a0)
+    sw                t5, 8(a0)
+    sw                t2, 12(a0)
+    b                 0b
+     addiu            a0, a0, 16
+
+1:
+    lbu               t6, 0(a1)            /* t6 =  0 |  0 |  0 | R1 */
+    lhu               t7, 1(a1)            /* t7 =  0 |  0 | B1 | G1 */
+    sll               t6, t6, 16           /* t6 =  0 | R1 |  0 | 0  */
+    wsbh              t7, t7               /* t7 =  0 |  0 | G1 | B1 */
+    or                t7, t6, t7           /* t7 =  0 | R1 | G1 | B1 */
+11:
+    beqz              t9, 4f
+     addiu            t9, t9, -1
+    lw                t0, 3(a1)            /* t0 = R3 | B2 | G2 | R2 */
+    lw                t1, 7(a1)            /* t1 = G4 | R4 | B3 | G3 */
+    lw                t2, 11(a1)           /* t2 = B5 | G5 | R5 | B4 */
+
+    addiu             a1, a1, 12
+    addiu             a2, a2, -4
+
+    wsbh              t0, t0               /* t0 = B2 | R3 | R2 | G2 */
+    wsbh              t1, t1               /* t1 = R4 | G4 | G3 | B3 */
+    wsbh              t2, t2               /* t2 = G5 | B5 | B4 | R5 */
+
+    packrl.ph         t3, t1, t0           /* t3 = G3 | B3 | B2 | R3 */
+    packrl.ph         t4, t2, t1           /* t4 = B4 | R5 | R4 | G4 */
+    rotr              t0, t0, 24           /* t0 = R3 | R2 | G2 | B2 */
+    rotr              t3, t3, 16           /* t3 = B2 | R3 | G3 | B3 */
+    rotr              t4, t4, 24           /* t4 = R5 | R4 | G4 | B4 */
+    or                t7, t7, t8           /* t7 = FF | R1 | G1 | B1 */
+    or                t0, t0, t8           /* t0 = FF | R2 | G2 | B2 */
+    or                t3, t3, t8           /* t1 = FF | R3 | G3 | B3 */
+    or                t4, t4, t8           /* t3 = FF | R4 | G4 | B4 */
+
+    sw                t7, 0(a0)
+    sw                t0, 4(a0)
+    sw                t3, 8(a0)
+    sw                t4, 12(a0)
+    rotr              t7, t2, 16           /* t7 = xx | R5 | G5 | B5 */
+    b                 11b
+     addiu            a0, a0, 16
+
+2:
+    lhu               t7, 0(a1)            /* t7 =  0 |  0 | G1 | R1 */
+    wsbh              t7, t7               /* t7 =  0 |  0 | R1 | G1 */
+21:
+    beqz              t9, 4f
+     addiu            t9, t9, -1
+    lw                t0, 2(a1)            /* t0 = B2 | G2 | R2 | B1 */
+    lw                t1, 6(a1)            /* t1 = R4 | B3 | G3 | R3 */
+    lw                t2, 10(a1)           /* t2 = G5 | R5 | B4 | G4 */
+
+    addiu             a1, a1, 12
+    addiu             a2, a2, -4
+
+    wsbh              t0, t0               /* t0 = G2 | B2 | B1 | R2 */
+    wsbh              t1, t1               /* t1 = B3 | R4 | R3 | G3 */
+    wsbh              t2, t2               /* t2 = R5 | G5 | G4 | B4 */
+
+    precr_sra.ph.w    t7, t0, 0            /* t7 = R1 | G1 | B1 | R2 */
+    rotr              t0, t0, 16           /* t0 = B1 | R2 | G2 | B2 */
+    packrl.ph         t3, t2, t1           /* t3 = G4 | B4 | B3 | R4 */
+    rotr              t1, t1, 24           /* t1 = R4 | R3 | G3 | B3 */
+    srl               t7, t7, 8            /* t7 =  0 | R1 | G1 | B1 */
+    rotr              t3, t3, 16           /* t3 = B3 | R4 | G4 | B4 */
+    or                t7, t7, t8           /* t7 = FF | R1 | G1 | B1 */
+    or                t0, t0, t8           /* t0 = FF | R2 | G2 | B2 */
+    or                t1, t1, t8           /* t1 = FF | R3 | G3 | B3 */
+    or                t3, t3, t8           /* t3 = FF | R4 | G4 | B4 */
+
+    sw                t7, 0(a0)
+    sw                t0, 4(a0)
+    sw                t1, 8(a0)
+    sw                t3, 12(a0)
+    srl               t7, t2, 16           /* t7 =  0 |  0 | R5 | G5 */
+    b                 21b
+     addiu            a0, a0, 16
+
+3:
+    lbu               t7, 0(a1)            /* t7 =  0 |  0 |  0 | R1 */
+31:
+    beqz              t9, 4f
+     addiu            t9, t9, -1
+    lw                t0, 1(a1)            /* t0 = G2 | R2 | B1 | G1 */
+    lw                t1, 5(a1)            /* t1 = B3 | G3 | R3 | B2 */
+    lw                t2, 9(a1)            /* t2 = R5 | B4 | G4 | R4 */
+
+    addiu             a1, a1, 12
+    addiu             a2, a2, -4
+
+    wsbh              t0, t0               /* t0 = R2 | G2 | G1 | B1 */
+    wsbh              t1, t1               /* t1 = G3 | B3 | B2 | R3 */
+    wsbh              t2, t2               /* t2 = B4 | R5 | R4 | G4 */
+
+    precr_sra.ph.w    t7, t0, 0            /* t7 = xx | R1 | G1 | B1 */
+    packrl.ph         t3, t1, t0           /* t3 = B2 | R3 | R2 | G2 */
+    rotr              t1, t1, 16           /* t1 = B2 | R3 | G3 | B3 */
+    rotr              t4, t2, 24           /* t4 = R5 | R4 | G4 | B4 */
+    rotr              t3, t3, 24           /* t3 = R3 | R2 | G2 | B2 */
+    or                t7, t7, t8           /* t7 = FF | R1 | G1 | B1 */
+    or                t3, t3, t8           /* t3 = FF | R2 | G2 | B2 */
+    or                t1, t1, t8           /* t1 = FF | R3 | G3 | B3 */
+    or                t4, t4, t8           /* t4 = FF | R4 | G4 | B4 */
+
+    sw                t7, 0(a0)
+    sw                t3, 4(a0)
+    sw                t1, 8(a0)
+    sw                t4, 12(a0)
+    srl               t7, t2, 16           /* t7 =  0 |  0 | xx | R5 */
+    b                 31b
+     addiu            a0, a0, 16
+
+4:
+    beqz              a2, 6f
+     nop
+5:
+    lbu               t0, 0(a1)            /* t0 =  0 | 0 | 0 | R */
+    lbu               t1, 1(a1)            /* t1 =  0 | 0 | 0 | G */
+    lbu               t2, 2(a1)            /* t2 =  0 | 0 | 0 | B */
+    addiu             a1, a1, 3
+
+    sll               t0, t0, 16           /* t2 =  0 | R | 0 | 0 */
+    sll               t1, t1, 8            /* t1 =  0 | 0 | G | 0 */
+
+    or                t2, t2, t1           /* t2 =  0 | 0 | G | B */
+    or                t2, t2, t0           /* t2 =  0 | R | G | B */
+    or                t2, t2, t8           /* t2 = FF | R | G | B */
+
+    sw                t2, 0(a0)
+    addiu             a2, a2, -1
+    bnez              a2, 5b
+     addiu            a0, a0, 4
+6:
+    j                 ra
+     nop
+
+END(pixman_composite_src_0888_8888_rev_asm_mips)
+
+LEAF_MIPS_DSPR2(pixman_composite_src_0888_0565_rev_asm_mips)
+/*
+ * a0 - dst (r5g6b5)
+ * a1 - src (b8g8r8)
+ * a2 - w
+ */
+
+    SAVE_REGS_ON_STACK 0, v0, v1
+    beqz              a2, 6f
+     nop
+
+    li                t6, 0xf800f800
+    li                t7, 0x07e007e0
+    li                t8, 0x001F001F
+    srl               t9, a2, 2   /* t9 = how many multiples of 4 src pixels */
+    beqz              t9, 4f      /* branch if less than 4 src pixels */
+     nop
+
+    li                t0, 0x1
+    li                t1, 0x2
+    li                t2, 0x3
+    andi              t3, a1, 0x3
+    beq               t3, t0, 1f
+     nop
+    beq               t3, t1, 2f
+     nop
+    beq               t3, t2, 3f
+     nop
+
+0:
+    beqz              t9, 4f
+     addiu            t9, t9, -1
+    lw                t0, 0(a1)            /* t0 = R2 | B1 | G1 | R1 */
+    lw                t1, 4(a1)            /* t1 = G3 | R3 | B2 | G2 */
+    lw                t2, 8(a1)            /* t2 = B4 | G4 | R4 | B3 */
+
+    addiu             a1, a1, 12
+    addiu             a2, a2, -4
+
+    wsbh              t0, t0               /* t0 = B1 | R2 | R1 | G1 */
+    wsbh              t1, t1               /* t1 = R3 | G3 | G2 | B2 */
+    wsbh              t2, t2               /* t2 = G4 | B4 | B3 | R4 */
+
+    packrl.ph         t3, t1, t0           /* t3 = G2 | B2 | B1 | R2 */
+    packrl.ph         t4, t0, t0           /* t4 = R1 | G1 | B1 | R2 */
+    rotr              t3, t3, 16           /* t3 = B1 | R2 | G2 | B2 */
+    srl               t4, t4, 8            /* t4 =  0 | R1 | G1 | B1 */
+    packrl.ph         t5, t2, t1           /* t5 = B3 | R4 | R3 | G3 */
+    rotr              t5, t5, 24           /* t5 = R4 | R3 | G3 | B3 */
+    rotr              t2, t2, 16           /* t2 = B3 | R4 | G4 | B4 */
+
+    CONVERT_2x8888_TO_2x0565 t4, t3, t4, t3, t6, t7, t8, v0, v1
+    CONVERT_2x8888_TO_2x0565 t5, t2, t5, t2, t6, t7, t8, v0, v1
+
+    sh                t4, 0(a0)
+    sh                t3, 2(a0)
+    sh                t5, 4(a0)
+    sh                t2, 6(a0)
+    b                 0b
+     addiu            a0, a0, 8
+
+1:
+    lbu               t4, 0(a1)            /* t4 =  0 |  0 |  0 | R1 */
+    lhu               t5, 1(a1)            /* t5 =  0 |  0 | B1 | G1 */
+    sll               t4, t4, 16           /* t4 =  0 | R1 |  0 | 0  */
+    wsbh              t5, t5               /* t5 =  0 |  0 | G1 | B1 */
+    or                t5, t4, t5           /* t5 =  0 | R1 | G1 | B1 */
+11:
+    beqz              t9, 4f
+     addiu            t9, t9, -1
+    lw                t0, 3(a1)            /* t0 = R3 | B2 | G2 | R2 */
+    lw                t1, 7(a1)            /* t1 = G4 | R4 | B3 | G3 */
+    lw                t2, 11(a1)           /* t2 = B5 | G5 | R5 | B4 */
+
+    addiu             a1, a1, 12
+    addiu             a2, a2, -4
+
+    wsbh              t0, t0               /* t0 = B2 | R3 | R2 | G2 */
+    wsbh              t1, t1               /* t1 = R4 | G4 | G3 | B3 */
+    wsbh              t2, t2               /* t2 = G5 | B5 | B4 | R5 */
+
+    packrl.ph         t3, t1, t0           /* t3 = G3 | B3 | B2 | R3 */
+    packrl.ph         t4, t2, t1           /* t4 = B4 | R5 | R4 | G4 */
+    rotr              t0, t0, 24           /* t0 = R3 | R2 | G2 | B2 */
+    rotr              t3, t3, 16           /* t3 = B2 | R3 | G3 | B3 */
+    rotr              t4, t4, 24           /* t4 = R5 | R4 | G4 | B4 */
+
+    CONVERT_2x8888_TO_2x0565 t5, t0, t5, t0, t6, t7, t8, v0, v1
+    CONVERT_2x8888_TO_2x0565 t3, t4, t3, t4, t6, t7, t8, v0, v1
+
+    sh                t5, 0(a0)
+    sh                t0, 2(a0)
+    sh                t3, 4(a0)
+    sh                t4, 6(a0)
+    rotr              t5, t2, 16           /* t5 = xx | R5 | G5 | B5 */
+    b                 11b
+     addiu            a0, a0, 8
+
+2:
+    lhu               t5, 0(a1)            /* t5 =  0 |  0 | G1 | R1 */
+    wsbh              t5, t5               /* t5 =  0 |  0 | R1 | G1 */
+21:
+    beqz              t9, 4f
+     addiu            t9, t9, -1
+    lw                t0, 2(a1)            /* t0 = B2 | G2 | R2 | B1 */
+    lw                t1, 6(a1)            /* t1 = R4 | B3 | G3 | R3 */
+    lw                t2, 10(a1)           /* t2 = G5 | R5 | B4 | G4 */
+
+    addiu             a1, a1, 12
+    addiu             a2, a2, -4
+
+    wsbh              t0, t0               /* t0 = G2 | B2 | B1 | R2 */
+    wsbh              t1, t1               /* t1 = B3 | R4 | R3 | G3 */
+    wsbh              t2, t2               /* t2 = R5 | G5 | G4 | B4 */
+
+    precr_sra.ph.w    t5, t0, 0            /* t5 = R1 | G1 | B1 | R2 */
+    rotr              t0, t0, 16           /* t0 = B1 | R2 | G2 | B2 */
+    packrl.ph         t3, t2, t1           /* t3 = G4 | B4 | B3 | R4 */
+    rotr              t1, t1, 24           /* t1 = R4 | R3 | G3 | B3 */
+    srl               t5, t5, 8            /* t5 =  0 | R1 | G1 | B1 */
+    rotr              t3, t3, 16           /* t3 = B3 | R4 | G4 | B4 */
+
+    CONVERT_2x8888_TO_2x0565 t5, t0, t5, t0, t6, t7, t8, v0, v1
+    CONVERT_2x8888_TO_2x0565 t1, t3, t1, t3, t6, t7, t8, v0, v1
+
+    sh                t5, 0(a0)
+    sh                t0, 2(a0)
+    sh                t1, 4(a0)
+    sh                t3, 6(a0)
+    srl               t5, t2, 16           /* t5 =  0 |  0 | R5 | G5 */
+    b                 21b
+     addiu            a0, a0, 8
+
+3:
+    lbu               t5, 0(a1)            /* t5 =  0 |  0 |  0 | R1 */
+31:
+    beqz              t9, 4f
+     addiu            t9, t9, -1
+    lw                t0, 1(a1)            /* t0 = G2 | R2 | B1 | G1 */
+    lw                t1, 5(a1)            /* t1 = B3 | G3 | R3 | B2 */
+    lw                t2, 9(a1)            /* t2 = R5 | B4 | G4 | R4 */
+
+    addiu             a1, a1, 12
+    addiu             a2, a2, -4
+
+    wsbh              t0, t0               /* t0 = R2 | G2 | G1 | B1 */
+    wsbh              t1, t1               /* t1 = G3 | B3 | B2 | R3 */
+    wsbh              t2, t2               /* t2 = B4 | R5 | R4 | G4 */
+
+    precr_sra.ph.w    t5, t0, 0            /* t5 = xx | R1 | G1 | B1 */
+    packrl.ph         t3, t1, t0           /* t3 = B2 | R3 | R2 | G2 */
+    rotr              t1, t1, 16           /* t1 = B2 | R3 | G3 | B3 */
+    rotr              t4, t2, 24           /* t4 = R5 | R4 | G4 | B4 */
+    rotr              t3, t3, 24           /* t3 = R3 | R2 | G2 | B2 */
+
+    CONVERT_2x8888_TO_2x0565 t5, t3, t5, t3, t6, t7, t8, v0, v1
+    CONVERT_2x8888_TO_2x0565 t1, t4, t1, t4, t6, t7, t8, v0, v1
+
+    sh                t5, 0(a0)
+    sh                t3, 2(a0)
+    sh                t1, 4(a0)
+    sh                t4, 6(a0)
+    srl               t5, t2, 16           /* t5 =  0 |  0 | xx | R5 */
+    b                 31b
+     addiu            a0, a0, 8
+
+4:
+    beqz              a2, 6f
+     nop
+5:
+    lbu               t0, 0(a1)            /* t0 =  0 | 0 | 0 | R */
+    lbu               t1, 1(a1)            /* t1 =  0 | 0 | 0 | G */
+    lbu               t2, 2(a1)            /* t2 =  0 | 0 | 0 | B */
+    addiu             a1, a1, 3
+
+    sll               t0, t0, 16           /* t2 =  0 | R | 0 | 0 */
+    sll               t1, t1, 8            /* t1 =  0 | 0 | G | 0 */
+
+    or                t2, t2, t1           /* t2 =  0 | 0 | G | B */
+    or                t2, t2, t0           /* t2 =  0 | R | G | B */
+
+    CONVERT_1x8888_TO_1x0565 t2, t3, t4, t5
+
+    sh                t3, 0(a0)
+    addiu             a2, a2, -1
+    bnez              a2, 5b
+     addiu            a0, a0, 2
+6:
+    RESTORE_REGS_FROM_STACK 0, v0, v1
+    j                 ra
+     nop
+
+END(pixman_composite_src_0888_0565_rev_asm_mips)
+#endif
+
 LEAF_MIPS_DSPR2(pixman_composite_src_n_8_8888_asm_mips)
 /*
  * a0 - dst  (a8r8g8b8)
