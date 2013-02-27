@@ -50,6 +50,8 @@ PIXMAN_MIPS_BIND_FAST_PATH_SRC_DST (DO_FAST_MEMCPY, src_0888_0888,
                                     uint8_t, 3, uint8_t, 3)
 PIXMAN_MIPS_BIND_FAST_PATH_SRC_DST (0, over_8888_8888,
                                     uint32_t, 1, uint32_t, 1)
+PIXMAN_MIPS_BIND_FAST_PATH_SRC_DST (0, over_8888_0565,
+                                    uint32_t, 1, uint16_t, 1)
 PIXMAN_MIPS_BIND_FAST_PATH_SRC_DST (0, add_8_8,
                                     uint8_t, 1, uint8_t, 1)
 PIXMAN_MIPS_BIND_FAST_PATH_SRC_DST (0, add_8888_8888,
@@ -67,6 +69,8 @@ PIXMAN_MIPS_BIND_FAST_PATH_N_MASK_DST (SKIP_ZERO_SRC, over_n_8888_8888_ca,
                                        uint32_t, 1, uint32_t, 1)
 PIXMAN_MIPS_BIND_FAST_PATH_N_MASK_DST (SKIP_ZERO_SRC, over_n_8888_0565_ca,
                                        uint32_t, 1, uint16_t, 1)
+PIXMAN_MIPS_BIND_FAST_PATH_N_MASK_DST (SKIP_ZERO_SRC, over_n_8_8,
+                                       uint8_t, 1, uint8_t, 1)
 PIXMAN_MIPS_BIND_FAST_PATH_N_MASK_DST (SKIP_ZERO_SRC, over_n_8_8888,
                                        uint8_t, 1, uint32_t, 1)
 PIXMAN_MIPS_BIND_FAST_PATH_N_MASK_DST (SKIP_ZERO_SRC, over_n_8_0565,
@@ -290,6 +294,7 @@ static const pixman_fast_path_t mips_dspr2_fast_paths[] =
     PIXMAN_STD_FAST_PATH_CA (OVER, solid, a8b8g8r8, x8b8g8r8, mips_composite_over_n_8888_8888_ca),
     PIXMAN_STD_FAST_PATH_CA (OVER, solid, a8r8g8b8, r5g6b5,   mips_composite_over_n_8888_0565_ca),
     PIXMAN_STD_FAST_PATH_CA (OVER, solid, a8b8g8r8, b5g6r5,   mips_composite_over_n_8888_0565_ca),
+    PIXMAN_STD_FAST_PATH (OVER, solid,    a8,       a8,       mips_composite_over_n_8_8),
     PIXMAN_STD_FAST_PATH (OVER, solid,    a8,       a8r8g8b8, mips_composite_over_n_8_8888),
     PIXMAN_STD_FAST_PATH (OVER, solid,    a8,       x8r8g8b8, mips_composite_over_n_8_8888),
     PIXMAN_STD_FAST_PATH (OVER, solid,    a8,       a8b8g8r8, mips_composite_over_n_8_8888),
@@ -318,6 +323,8 @@ static const pixman_fast_path_t mips_dspr2_fast_paths[] =
     PIXMAN_STD_FAST_PATH (OVER, a8r8g8b8, null,     x8r8g8b8, mips_composite_over_8888_8888),
     PIXMAN_STD_FAST_PATH (OVER, a8b8g8r8, null,     a8b8g8r8, mips_composite_over_8888_8888),
     PIXMAN_STD_FAST_PATH (OVER, a8b8g8r8, null,     x8b8g8r8, mips_composite_over_8888_8888),
+    PIXMAN_STD_FAST_PATH (OVER, a8r8g8b8, null,     r5g6b5,   mips_composite_over_8888_0565),
+    PIXMAN_STD_FAST_PATH (OVER, a8b8g8r8, null,     b5g6r5,   mips_composite_over_8888_0565),
     PIXMAN_STD_FAST_PATH (ADD,  solid,    a8,       a8,       mips_composite_add_n_8_8),
     PIXMAN_STD_FAST_PATH (ADD,  solid,    a8,       a8r8g8b8, mips_composite_add_n_8_8888),
     PIXMAN_STD_FAST_PATH (ADD,  solid,    a8,       a8b8g8r8, mips_composite_add_n_8_8888),
