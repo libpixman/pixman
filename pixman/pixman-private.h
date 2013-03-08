@@ -1,3 +1,5 @@
+#include <float.h>
+
 #ifndef PIXMAN_PRIVATE_H
 #define PIXMAN_PRIVATE_H
 
@@ -878,6 +880,8 @@ pixman_list_move_to_front (pixman_list_t *list, pixman_link_t *link)
 #define MOD(a, b) ((a) < 0 ? ((b) - ((-(a) - 1) % (b))) - 1 : (a) % (b))
 
 #define CLIP(v, low, high) ((v) < (low) ? (low) : ((v) > (high) ? (high) : (v)))
+
+#define FLOAT_IS_ZERO(f)     (-FLT_MIN < (f) && (f) < FLT_MIN)
 
 /* Conversion between 8888 and 0565 */
 
