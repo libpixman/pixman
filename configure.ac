@@ -845,6 +845,13 @@ if test x$have_gettimeofday = xyes && test x$have_sys_time_h = xyes; then
 fi
 
 dnl =====================================
+dnl Check for missing sqrtf() as, e.g., for Solaris 9
+
+AC_SEARCH_LIBS([sqrtf], [m], [],
+               [AC_DEFINE([sqrtf], [sqrt],
+                          [Define to sqrt if you do not have the `sqrtf' function.])])
+
+dnl =====================================
 dnl Thread local storage
 
 AC_MSG_CHECKING(for thread local storage (TLS) support)
