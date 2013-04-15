@@ -3069,6 +3069,67 @@ LEAF_MIPS_DSPR2(pixman_composite_in_n_8_asm_mips)
 
 END(pixman_composite_in_n_8_asm_mips)
 
+LEAF_MIPS_DSPR2(pixman_scaled_nearest_scanline_8888_8888_OVER_asm_mips)
+/*
+ * a0     - dst  (a8r8g8b8)
+ * a1     - src  (a8r8g8b8)
+ * a2     - w
+ * a3     - vx
+ * 16(sp) - unit_x
+ */
+
+    SAVE_REGS_ON_STACK 0, s0, s1, s2, s3
+    lw       t8, 16(sp) /* t8 = unit_x */
+    li       t6, 0x00ff00ff
+    beqz     a2, 3f
+     nop
+    addiu    t1, a2, -1
+    beqz     t1, 2f
+     nop
+1:
+    sra      t0, a3, 16 /* t0 = vx >> 16 */
+    sll      t0, t0, 2  /* t0 = t0 * 4 (a8r8g8b8) */
+    addu     t0, a1, t0
+    lw       t0, 0(t0)  /* t0 = source      (a8r8g8b8) */
+    addu     a3, a3, t8 /* a3 = vx + unit_x */
+
+    sra      t1, a3, 16 /* t0 = vx >> 16 */
+    sll      t1, t1, 2  /* t0 = t0 * 4 (a8r8g8b8) */
+    addu     t1, a1, t1
+    lw       t1, 0(t1)  /* t1 = source      (a8r8g8b8) */
+    addu     a3, a3, t8 /* a3 = vx + unit_x */
+
+    lw       t2, 0(a0)  /* t2 = destination (a8r8g8b8) */
+    lw       t3, 4(a0)  /* t3 = destination (a8r8g8b8) */
+
+    OVER_2x8888_2x8888 t0, t1, t2, t3, t4, t5, t6, t7, t9, s0, s1, s2, s3
+
+    sw       t4, 0(a0)
+    sw       t5, 4(a0)
+    addiu    a2, a2, -2
+    addiu    t1, a2, -1
+    bgtz     t1, 1b
+     addiu   a0, a0, 8
+2:
+    beqz     a2, 3f
+     nop
+    sra      t0, a3, 16 /* t0 = vx >> 16 */
+    sll      t0, t0, 2  /* t0 = t0 * 4 (a8r8g8b8) */
+    addu     t0, a1, t0
+    lw       t0, 0(t0)  /* t0 = source      (a8r8g8b8) */
+    lw       t1, 0(a0)  /* t1 = destination (a8r8g8b8) */
+    addu     a3, a3, t8 /* a3 = vx + unit_x */
+
+    OVER_8888_8888 t0, t1, t2, t6, t4, t5, t3, t7
+
+    sw       t2, 0(a0)
+3:
+    RESTORE_REGS_FROM_STACK 0, s0, s1, s2, s3
+    j        ra
+     nop
+
+END(pixman_scaled_nearest_scanline_8888_8888_OVER_asm_mips)
+
 LEAF_MIPS_DSPR2(pixman_scaled_nearest_scanline_8888_8_0565_OVER_asm_mips)
 /*
  * a0     - dst  (r5g6b5)

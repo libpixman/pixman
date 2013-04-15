@@ -587,6 +587,36 @@ LEAF_MIPS32R2(symbol)                                   \
     addu_s.qb          \out_8888, \out_8888, \s_8888
 .endm
 
+/*
+ * OVER operation on two a8r8g8b8 source pixels (s1_8888 and s2_8888) and two
+ * a8r8g8b8 destination pixels (d1_8888 and d2_8888). It also requires maskLSR
+ * needed for rounding process. maskLSR must have following value:
+ *   li       maskLSR, 0x00ff00ff
+ */
+.macro OVER_2x8888_2x8888 s1_8888,   \
+                          s2_8888,   \
+                          d1_8888,   \
+                          d2_8888,   \
+                          out1_8888, \
+                          out2_8888, \
+                          maskLSR,   \
+                          scratch1, scratch2, scratch3, \
+                          scratch4, scratch5, scratch6
+    not                    \scratch1,  \s1_8888
+    srl                    \scratch1,  \scratch1,  24
+    not                    \scratch2,  \s2_8888
+    srl                    \scratch2,  \scratch2,  24
+    MIPS_2xUN8x4_MUL_2xUN8 \d1_8888,   \d2_8888, \
+                           \scratch1,  \scratch2,  \
+                           \out1_8888, \out2_8888, \
+                           \maskLSR, \
+                           \scratch3,  \scratch4, \scratch5, \
+                           \scratch6,  \d1_8888,  \d2_8888
+
+    addu_s.qb              \out1_8888, \out1_8888, \s1_8888
+    addu_s.qb              \out2_8888, \out2_8888, \s2_8888
+.endm
+
 .macro MIPS_UN8x4_MUL_UN8_ADD_UN8x4 s_8888,   \
                                     m_8,      \
                                     d_8888,   \
