@@ -354,17 +354,16 @@ LEAF_MIPS32R2(symbol)                                   \
                                 out1_565, out2_565,  \
                                 maskR, maskG, maskB, \
                                 scratch1, scratch2
-    precrq.ph.w       \scratch1, \in2_8888, \in1_8888
-    precr_sra.ph.w    \in2_8888, \in1_8888, 0
-    shll.ph           \scratch1, \scratch1, 8
-    srl               \in2_8888, \in2_8888, 3
-    and               \scratch2, \in2_8888, \maskB
-    and               \scratch1, \scratch1, \maskR
-    srl               \in2_8888, \in2_8888, 2
-    and               \out2_565, \in2_8888, \maskG
-    or                \out2_565, \out2_565, \scratch2
-    or                \out1_565, \out2_565, \scratch1
-    srl               \out2_565, \out1_565, 16
+    precr.qb.ph    \scratch1, \in2_8888, \in1_8888
+    precrq.qb.ph   \in2_8888, \in2_8888, \in1_8888
+    and            \out1_565, \scratch1, \maskR
+    shrl.ph        \scratch1, \scratch1, 3
+    shll.ph        \in2_8888, \in2_8888, 3
+    and            \scratch1, \scratch1, \maskB
+    or             \out1_565, \out1_565, \scratch1
+    and            \in2_8888, \in2_8888, \maskG
+    or             \out1_565, \out1_565, \in2_8888
+    srl            \out2_565, \out1_565, 16
 .endm
 
 /*

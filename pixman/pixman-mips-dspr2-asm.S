@@ -3196,6 +3196,65 @@ LEAF_MIPS_DSPR2(pixman_scaled_nearest_scanline_8888_0565_OVER_asm_mips)
 
 END(pixman_scaled_nearest_scanline_8888_0565_OVER_asm_mips)
 
+LEAF_MIPS_DSPR2(pixman_scaled_nearest_scanline_0565_8888_SRC_asm_mips)
+/*
+ * a0     - dst (a8r8g8b8)
+ * a1     - src (r5g6b5)
+ * a2     - w
+ * a3     - vx
+ * 16(sp) - unit_x
+ */
+
+    SAVE_REGS_ON_STACK 0, v0
+    beqz     a2, 3f
+     nop
+
+    lw       v0, 16(sp) /* v0 = unit_x */
+    addiu    t1, a2, -1
+    beqz     t1, 2f
+     nop
+
+    li       t4, 0x07e007e0
+    li       t5, 0x001F001F
+1:
+    sra      t0, a3, 16 /* t0 = vx >> 16 */
+    sll      t0, t0, 1  /* t0 = t0 * 2 ((r5g6b5)) */
+    addu     t0, a1, t0
+    lhu      t0, 0(t0)  /* t0 = source ((r5g6b5)) */
+    addu     a3, a3, v0 /* a3 = vx + unit_x */
+    sra      t1, a3, 16 /* t1 = vx >> 16 */
+    sll      t1, t1, 1  /* t1 = t1 * 2 ((r5g6b5)) */
+    addu     t1, a1, t1
+    lhu      t1, 0(t1)  /* t1 = source ((r5g6b5)) */
+    addu     a3, a3, v0 /* a3 = vx + unit_x */
+    addiu    a2, a2, -2
+
+    CONVERT_2x0565_TO_2x8888 t0, t1, t2, t3, t4, t5, t6, t7, t8, t9
+
+    sw       t2, 0(a0)
+    sw       t3, 4(a0)
+
+    addiu    t2, a2, -1
+    bgtz     t2, 1b
+     addiu   a0, a0, 8
+2:
+    beqz     a2, 3f
+     nop
+    sra      t0, a3, 16 /* t0 = vx >> 16 */
+    sll      t0, t0, 1  /* t0 = t0 * 2 ((r5g6b5)) */
+    addu     t0, a1, t0
+    lhu      t0, 0(t0)  /* t0 = source ((r5g6b5)) */
+
+    CONVERT_1x0565_TO_1x8888 t0, t1, t2, t3
+
+    sw       t1, 0(a0)
+3:
+    RESTORE_REGS_FROM_STACK 0, v0
+    j        ra
+     nop
+
+END(pixman_scaled_nearest_scanline_0565_8888_SRC_asm_mips)
+
 LEAF_MIPS_DSPR2(pixman_scaled_nearest_scanline_8888_8_0565_OVER_asm_mips)
 /*
  * a0     - dst  (r5g6b5)
