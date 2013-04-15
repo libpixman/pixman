@@ -2974,96 +2974,74 @@ END(pixman_composite_over_reverse_n_8888_asm_mips)
 LEAF_MIPS_DSPR2(pixman_composite_in_n_8_asm_mips)
 /*
  * a0 - dst  (a8)
- * a1 - src  (a8r8g8b8)
+ * a1 - src  (32bit constant)
  * a2 - w
  */
 
-    beqz              a2, 5f
+    li                t9, 0x00ff00ff
+    beqz              a2, 3f
+     nop
+    srl               t7, a2, 2   /* t7 = how many multiples of 4 dst pixels */
+    beqz              t7, 1f      /* branch if less than 4 src pixels */
      nop
 
-    SAVE_REGS_ON_STACK 20, s0, s1, s2, s3, s4, s5, s6, s7
-    move              t7, a1
-    srl               t5, t7, 24
-    replv.ph          t5, t5
-    srl               t9, a2, 2   /* t1 = how many multiples of 4 src pixels */
-    beqz              t9, 2f      /* branch if less than 4 src pixels */
-     nop
+    srl               t8, a1, 24
+    replv.ph          t8, t8
 
-1:
-    addiu             t9, t9, -1
-    addiu             a2, a2, -4
+0:
+    beqz              t7, 1f
+     addiu            t7, t7, -1
     lbu               t0, 0(a0)
     lbu               t1, 1(a0)
     lbu               t2, 2(a0)
     lbu               t3, 3(a0)
 
-    muleu_s.ph.qbl    s0, t0, t5
-    muleu_s.ph.qbr    s1, t0, t5
-    muleu_s.ph.qbl    s2, t1, t5
-    muleu_s.ph.qbr    s3, t1, t5
-    muleu_s.ph.qbl    s4, t2, t5
-    muleu_s.ph.qbr    s5, t2, t5
-    muleu_s.ph.qbl    s6, t3, t5
-    muleu_s.ph.qbr    s7, t3, t5
+    precr_sra.ph.w    t1, t0, 0
+    precr_sra.ph.w    t3, t2, 0
+    precr.qb.ph       t0, t3, t1
 
-    shrl.ph           t4, s0, 8
-    shrl.ph           t6, s1, 8
-    shrl.ph           t7, s2, 8
-    shrl.ph           t8, s3, 8
-    addq.ph           t0, s0, t4
-    addq.ph           t1, s1, t6
-    addq.ph           t2, s2, t7
-    addq.ph           t3, s3, t8
-    shra_r.ph         t0, t0, 8
-    shra_r.ph         t1, t1, 8
+    muleu_s.ph.qbl    t2, t0, t8
+    muleu_s.ph.qbr    t3, t0, t8
+    shra_r.ph         t4, t2, 8
+    shra_r.ph         t5, t3, 8
+    and               t4, t4, t9
+    and               t5, t5, t9
+    addq.ph           t2, t2, t4
+    addq.ph           t3, t3, t5
     shra_r.ph         t2, t2, 8
     shra_r.ph         t3, t3, 8
-    shrl.ph           t4, s4, 8
-    shrl.ph           t6, s5, 8
-    shrl.ph           t7, s6, 8
-    shrl.ph           t8, s7, 8
-    addq.ph           s0, s4, t4
-    addq.ph           s1, s5, t6
-    addq.ph           s2, s6, t7
-    addq.ph           s3, s7, t8
-    shra_r.ph         t4, s0, 8
-    shra_r.ph         t6, s1, 8
-    shra_r.ph         t7, s2, 8
-    shra_r.ph         t8, s3, 8
+    precr.qb.ph       t2, t2, t3
 
-    precr.qb.ph       s0, t0, t1
-    precr.qb.ph       s1, t2, t3
-    precr.qb.ph       s2, t4, t6
-    precr.qb.ph       s3, t7, t8
-
-    sb                s0, 0(a0)
-    sb                s1, 1(a0)
-    sb                s2, 2(a0)
-    sb                s3, 3(a0)
-    bgtz              t9, 1b
+    sb                t2, 0(a0)
+    srl               t2, t2, 8
+    sb                t2, 1(a0)
+    srl               t2, t2, 8
+    sb                t2, 2(a0)
+    srl               t2, t2, 8
+    sb                t2, 3(a0)
+    addiu             a2, a2, -4
+    b                 0b
      addiu            a0, a0, 4
-2:
-    beqz              a2, 4f
-     nop
-3:
-    lbu               t1, 0(a0)
 
-    muleu_s.ph.qbl    t4, t1, t5
-    muleu_s.ph.qbr    t7, t1, t5
-    shrl.ph           t6, t4, 8
-    shrl.ph           t0, t7, 8
-    addq.ph           t8, t4, t6
-    addq.ph           t9, t7, t0
-    shra_r.ph         t8, t8, 8
-    shra_r.ph         t9, t9, 8
-    precr.qb.ph       t2, t8, t9
+1:
+    beqz              a2, 3f
+     nop
+    srl               t8, a1, 24
+2:
+    lbu               t0, 0(a0)
+
+    mul               t2, t0, t8
+    shra_r.ph         t3, t2, 8
+    andi              t3, t3, 0x00ff
+    addq.ph           t2, t2, t3
+    shra_r.ph         t2, t2, 8
+
     sb                t2, 0(a0)
     addiu             a2, a2, -1
-    bnez              a2, 3b
+    bnez              a2, 2b
      addiu            a0, a0, 1
-4:
-    RESTORE_REGS_FROM_STACK 20, s0, s1, s2, s3, s4, s5, s6, s7
-5:
+
+3:
     j                 ra
      nop
 
