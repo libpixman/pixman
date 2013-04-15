@@ -761,6 +761,65 @@ LEAF_MIPS_DSPR2(pixman_composite_src_pixbuf_8888_asm_mips)
 
 END(pixman_composite_src_pixbuf_8888_asm_mips)
 
+LEAF_MIPS_DSPR2(pixman_composite_src_rpixbuf_8888_asm_mips)
+/*
+ * a0 - dst  (a8r8g8b8)
+ * a1 - src  (a8r8g8b8)
+ * a2 - w
+ */
+
+    SAVE_REGS_ON_STACK 0, v0
+    li       v0, 0x00ff00ff
+
+    beqz     a2, 3f
+     nop
+    addiu    t1, a2, -1
+    beqz     t1, 2f
+     nop
+1:
+    lw       t0, 0(a1)
+    lw       t1, 4(a1)
+    addiu    a1, a1, 8
+    addiu    a2, a2, -2
+    srl      t2, t0, 24
+    srl      t3, t1, 24
+
+    MIPS_2xUN8x4_MUL_2xUN8 t0, t1, t2, t3, t0, t1, v0, t4, t5, t6, t7, t8, t9
+
+    sll      t0, t0, 8
+    sll      t1, t1, 8
+    andi     t2, t2, 0xff
+    andi     t3, t3, 0xff
+    or       t0, t0, t2
+    or       t1, t1, t3
+    rotr     t0, t0, 8
+    rotr     t1, t1, 8
+    sw       t0, 0(a0)
+    sw       t1, 4(a0)
+
+    addiu    t2, a2, -1
+    bgtz     t2, 1b
+     addiu   a0, a0, 8
+2:
+    beqz     a2, 3f
+     nop
+    lw       t0, 0(a1)
+    srl      t1, t0, 24
+
+    MIPS_UN8x4_MUL_UN8 t0, t1, t0, v0, t3, t4, t5
+
+    sll      t0, t0, 8
+    andi     t1, t1, 0xff
+    or       t0, t0, t1
+    rotr     t0, t0, 8
+    sw       t0, 0(a0)
+3:
+    RESTORE_REGS_FROM_STACK 0, v0
+    j        ra
+     nop
+
+END(pixman_composite_src_rpixbuf_8888_asm_mips)
+
 LEAF_MIPS_DSPR2(pixman_composite_src_n_8_8888_asm_mips)
 /*
  * a0 - dst  (a8r8g8b8)
