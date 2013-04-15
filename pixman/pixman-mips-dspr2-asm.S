@@ -3130,6 +3130,72 @@ LEAF_MIPS_DSPR2(pixman_scaled_nearest_scanline_8888_8888_OVER_asm_mips)
 
 END(pixman_scaled_nearest_scanline_8888_8888_OVER_asm_mips)
 
+LEAF_MIPS_DSPR2(pixman_scaled_nearest_scanline_8888_0565_OVER_asm_mips)
+/*
+ * a0     - dst  (r5g6b5)
+ * a1     - src  (a8r8g8b8)
+ * a2     - w
+ * a3     - vx
+ * 16(sp) - unit_x
+ */
+
+    SAVE_REGS_ON_STACK 24, s0, s1, s2, s3, s4, v0, v1
+    lw       t8, 40(sp) /* t8 = unit_x */
+    li       t4, 0x00ff00ff
+    li       t5, 0xf800f800
+    li       t6, 0x07e007e0
+    li       t7, 0x001F001F
+    beqz     a2, 3f
+     nop
+    addiu    t1, a2, -1
+    beqz     t1, 2f
+     nop
+1:
+    sra      t0, a3, 16 /* t0 = vx >> 16 */
+    sll      t0, t0, 2  /* t0 = t0 * 4 (a8r8g8b8) */
+    addu     t0, a1, t0
+    lw       t0, 0(t0)  /* t0 = source      (a8r8g8b8) */
+    addu     a3, a3, t8 /* a3 = vx + unit_x */
+    sra      t1, a3, 16 /* t0 = vx >> 16 */
+    sll      t1, t1, 2  /* t0 = t0 * 4 (a8r8g8b8) */
+    addu     t1, a1, t1
+    lw       t1, 0(t1)  /* t1 = source      (a8r8g8b8) */
+    addu     a3, a3, t8 /* a3 = vx + unit_x */
+    lhu      t2, 0(a0)  /* t2 = destination (r5g6b5) */
+    lhu      t3, 2(a0)  /* t3 = destination (r5g6b5) */
+
+    CONVERT_2x0565_TO_2x8888 t2, t3, v0, v1, t6, t7, s0, s1, s2, s3
+    OVER_2x8888_2x8888       t0, t1, v0, v1, t2, t3, t4, t9, s0, s1, s2, s3, s4
+    CONVERT_2x8888_TO_2x0565 t2, t3, v0, v1, t5, t6, t7, t9, s2
+
+    sh       v0, 0(a0)
+    sh       v1, 2(a0)
+    addiu    a2, a2, -2
+    addiu    t1, a2, -1
+    bgtz     t1, 1b
+     addiu   a0, a0, 4
+2:
+    beqz     a2, 3f
+     nop
+    sra      t0, a3, 16 /* t0 = vx >> 16 */
+    sll      t0, t0, 2  /* t0 = t0 * 4 (a8r8g8b8) */
+    addu     t0, a1, t0
+    lw       t0, 0(t0)  /* t0 = source      (a8r8g8b8) */
+    lhu      t1, 0(a0)  /* t1 = destination (r5g6b5) */
+    addu     a3, a3, t8 /* a3 = vx + unit_x */
+
+    CONVERT_1x0565_TO_1x8888 t1, t2, t5, t6
+    OVER_8888_8888           t0, t2, t1, t4, t3, t5, t6, t7
+    CONVERT_1x8888_TO_1x0565 t1, t2, t5, t6
+
+    sh       t2, 0(a0)
+3:
+    RESTORE_REGS_FROM_STACK 24, s0, s1, s2, s3, s4, v0, v1
+    j        ra
+     nop
+
+END(pixman_scaled_nearest_scanline_8888_0565_OVER_asm_mips)
+
 LEAF_MIPS_DSPR2(pixman_scaled_nearest_scanline_8888_8_0565_OVER_asm_mips)
 /*
  * a0     - dst  (r5g6b5)
