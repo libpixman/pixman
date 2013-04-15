@@ -643,6 +643,8 @@ tests_tbl[] =
     { "src_0888_0565",         PIXMAN_r8g8b8,      0, PIXMAN_OP_SRC,     PIXMAN_null,     0, PIXMAN_r5g6b5 },
     { "src_0888_8888",         PIXMAN_r8g8b8,      0, PIXMAN_OP_SRC,     PIXMAN_null,     0, PIXMAN_a8r8g8b8 },
     { "src_0888_x888",         PIXMAN_r8g8b8,      0, PIXMAN_OP_SRC,     PIXMAN_null,     0, PIXMAN_x8r8g8b8 },
+    { "src_0888_8888_rev",     PIXMAN_b8g8r8,      0, PIXMAN_OP_SRC,     PIXMAN_null,     0, PIXMAN_x8r8g8b8 },
+    { "src_0888_0565_rev",     PIXMAN_b8g8r8,      0, PIXMAN_OP_SRC,     PIXMAN_null,     0, PIXMAN_r5g6b5 },
     { "src_x888_x888",         PIXMAN_x8r8g8b8,    0, PIXMAN_OP_SRC,     PIXMAN_null,     0, PIXMAN_x8r8g8b8 },
     { "src_x888_8888",         PIXMAN_x8r8g8b8,    0, PIXMAN_OP_SRC,     PIXMAN_null,     0, PIXMAN_a8r8g8b8 },
     { "src_8888_8888",         PIXMAN_a8r8g8b8,    0, PIXMAN_OP_SRC,     PIXMAN_null,     0, PIXMAN_a8r8g8b8 },
