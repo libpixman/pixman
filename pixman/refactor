@@ -91,7 +91,7 @@ Starting from a destination pixel (x, y), do
 	transparent. I don't really care
 
 	Basically, I think the render spec should say that pixels that
-	are unavailable due to the hierarcy have undefined content,
+	are unavailable due to the hierarchy have undefined content,
 	and that GraphicsExposes are not generated. Ie., basically
 	that using non-redirected windows as sources is fail. This is
 	at least consistent with the current implementation and we can
