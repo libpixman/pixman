@@ -301,6 +301,29 @@ negate (__m64 mask)
     return _mm_xor_si64 (mask, MC (4x00ff));
 }
 
+/* Computes the product of two unsigned fixed-point 8-bit values from 0 to 1
+ * and maps its result to the same range.
+ *
+ * Jim Blinn gives multiple ways to compute this in "Jim Blinn's Corner:
+ * Notation, Notation, Notation", the first of which is
+ *
+ *   prod(a, b) = (a * b + 128) / 255.
+ *
+ * By approximating the division by 255 as 257/65536 it can be replaced by a
+ * multiply and a right shift. This is the implementation that we use in
+ * pix_multiply(), but we _mm_mulhi_pu16() by 257 (part of SSE1 or Extended
+ * 3DNow!, and unavailable at the time of the book's publication) to perform
+ * the multiplication and right shift in a single operation.
+ *
+ *   prod(a, b) = ((a * b + 128) * 257) >> 16.
+ *
+ * A third way (how pix_multiply() was implemented prior to 14208344) exists
+ * also that performs the multiplication by 257 with adds and shifts.
+ *
+ * Where temp = a * b + 128
+ *
+ *   prod(a, b) = (temp + (temp >> 8)) >> 8.
+ */
 static force_inline __m64
 pix_multiply (__m64 a, __m64 b)
 {
