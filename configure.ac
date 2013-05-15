@@ -279,7 +279,7 @@ AC_MSG_CHECKING(whether to use Loongson MMI assembler)
 
 xserver_save_CFLAGS=$CFLAGS
 CFLAGS=" $LS_CFLAGS $CFLAGS -I$srcdir"
-AC_COMPILE_IFELSE([AC_LANG_SOURCE([[
+AC_LINK_IFELSE([AC_LANG_SOURCE([[
 #ifndef __mips_loongson_vector_rev
 #error "Loongson Multimedia Instructions are only available on Loongson"
 #endif
