@@ -64,8 +64,9 @@ noop_src_iter_init (pixman_implementation_t *imp, pixman_iter_t *iter)
 {
     pixman_image_t *image = iter->image;
 
-#define FLAGS						\
-    (FAST_PATH_STANDARD_FLAGS | FAST_PATH_ID_TRANSFORM)
+#define FLAGS								\
+    (FAST_PATH_STANDARD_FLAGS | FAST_PATH_ID_TRANSFORM |		\
+     FAST_PATH_BITS_IMAGE | FAST_PATH_SAMPLES_COVER_CLIP_NEAREST)
 
     if (!image)
     {
@@ -113,10 +114,7 @@ noop_src_iter_init (pixman_implementation_t *imp, pixman_iter_t *iter)
     }
     else if (image->common.extended_format_code == PIXMAN_a8r8g8b8	&&
 	     (iter->iter_flags & ITER_NARROW)				&&
-	     (iter->image_flags & FLAGS) == FLAGS			&&
-	     iter->x >= 0 && iter->y >= 0				&&
-	     iter->x + iter->width <= image->bits.width			&&
-	     iter->y + iter->height <= image->bits.height)
+	     (iter->image_flags & FLAGS) == FLAGS)
     {
 	iter->buffer =
 	    image->bits.bits + iter->y * image->bits.rowstride + iter->x;
