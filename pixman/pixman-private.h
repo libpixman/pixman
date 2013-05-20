@@ -231,7 +231,13 @@ typedef enum
      */
     ITER_LOCALIZED_ALPHA =	(1 << 1),
     ITER_IGNORE_ALPHA =		(1 << 2),
-    ITER_IGNORE_RGB =		(1 << 3)
+    ITER_IGNORE_RGB =		(1 << 3),
+
+    /* These indicate whether the iterator is for a source
+     * or a destination image
+     */
+    ITER_SRC =			(1 << 4),
+    ITER_DEST =			(1 << 5)
 } iter_flags_t;
 
 struct pixman_iter_t

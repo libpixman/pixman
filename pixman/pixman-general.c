@@ -154,7 +154,7 @@ general_composite_rect  (pixman_implementation_t *imp,
     }
     
     /* src iter */
-    src_iter_flags = narrow | op_flags[op].src;
+    src_iter_flags = narrow | op_flags[op].src | ITER_SRC;
 
     _pixman_implementation_src_iter_init (imp->toplevel, &src_iter, src_image,
 					  src_x, src_y, width, height,
@@ -177,13 +177,17 @@ general_composite_rect  (pixman_implementation_t *imp,
         PIXMAN_FORMAT_RGB (mask_image->bits.format);
 
     _pixman_implementation_src_iter_init (
-	imp->toplevel, &mask_iter, mask_image, mask_x, mask_y, width, height,
-	mask_buffer, narrow | (component_alpha? 0 : ITER_IGNORE_RGB), info->mask_flags);
+	imp->toplevel, &mask_iter,
+	mask_image, mask_x, mask_y, width, height, mask_buffer,
+	ITER_SRC | narrow | (component_alpha? 0 : ITER_IGNORE_RGB),
+	info->mask_flags);
 
     /* dest iter */
     _pixman_implementation_dest_iter_init (
-	imp->toplevel, &dest_iter, dest_image, dest_x, dest_y, width, height,
-	dest_buffer, narrow | op_flags[op].dst, info->dest_flags);
+	imp->toplevel, &dest_iter,
+	dest_image, dest_x, dest_y, width, height, dest_buffer,
+	ITER_DEST | narrow | op_flags[op].dst,
+	info->dest_flags);
 
     compose = _pixman_implementation_lookup_combiner (
 	imp->toplevel, op, component_alpha, narrow);
