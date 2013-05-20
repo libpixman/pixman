@@ -78,8 +78,7 @@ noop_src_iter_init (pixman_implementation_t *imp, pixman_iter_t *iter)
 	iter->get_scanline = _pixman_iter_get_scanline_noop;
     }
     else if (image->common.extended_format_code == PIXMAN_solid		&&
-	     (iter->image->type == SOLID ||
-	      (iter->image_flags & FAST_PATH_NO_ALPHA_MAP)))
+	     (iter->image_flags & FAST_PATH_NO_ALPHA_MAP))
     {
 	if (iter->iter_flags & ITER_NARROW)
 	{

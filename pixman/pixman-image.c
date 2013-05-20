@@ -502,8 +502,10 @@ compute_image_info (pixman_image_t *image)
 	break;
     }
 
-    /* Alpha map */
-    if (!image->common.alpha_map)
+    /* Alpha maps are only supported for BITS images, so it's always
+     * safe to ignore their presense for non-BITS images
+     */
+    if (!image->common.alpha_map || image->type != BITS)
     {
 	flags |= FAST_PATH_NO_ALPHA_MAP;
     }
