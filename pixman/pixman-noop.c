@@ -37,12 +37,6 @@ noop_composite (pixman_implementation_t *imp,
     return;
 }
 
-static void
-dest_write_back_direct (pixman_iter_t *iter)
-{
-    iter->buffer += iter->image->bits.rowstride;
-}
-
 static uint32_t *
 noop_get_scanline (pixman_iter_t *iter, const uint32_t *mask)
 {
@@ -51,12 +45,6 @@ noop_get_scanline (pixman_iter_t *iter, const uint32_t *mask)
     iter->buffer += iter->image->bits.rowstride;
 
     return result;
-}
-
-static uint32_t *
-get_scanline_null (pixman_iter_t *iter, const uint32_t *mask)
-{
-    return NULL;
 }
 
 static void
@@ -104,6 +92,12 @@ noop_init_direct_buffer (pixman_iter_t *iter, const pixman_iter_info_t *info)
 	image->bits.bits + iter->y * image->bits.rowstride + iter->x;
 }
 
+static void
+dest_write_back_direct (pixman_iter_t *iter)
+{
+    iter->buffer += iter->image->bits.rowstride;
+}
+
 static const pixman_iter_info_t noop_iters[] =
 {
     /* Source iters */
@@ -149,48 +143,6 @@ static const pixman_iter_info_t noop_iters[] =
     { PIXMAN_null },
 };
 
-static pixman_bool_t
-noop_iter_init_common (pixman_implementation_t *imp, pixman_iter_t *iter)
-{
-    const pixman_iter_info_t *info;
-    
-    if (!iter->image)
-    {
-	iter->get_scanline = get_scanline_null;
-	return TRUE;
-    }
-
-    for (info = noop_iters; info->format != PIXMAN_null; ++info)
-    {
-	if ((info->format == PIXMAN_any ||
-	     info->format == iter->image->common.extended_format_code)	 &&
-	    (info->image_flags & iter->image_flags) == info->image_flags &&
-	    (info->iter_flags & iter->iter_flags) == info->iter_flags)
-	{
-	    iter->get_scanline = info->get_scanline;
-	    iter->write_back = info->write_back;
-
-	    if (info->initializer)
-		info->initializer (iter, info);
-	    return TRUE;
-	}
-    }
-
-    return FALSE;
-}
-
-static pixman_bool_t
-noop_src_iter_init (pixman_implementation_t *imp, pixman_iter_t *iter)
-{
-    return noop_iter_init_common (imp, iter);
-}
-
-static pixman_bool_t
-noop_dest_iter_init (pixman_implementation_t *imp, pixman_iter_t *iter)
-{
-    return noop_iter_init_common (imp, iter);
-}
-
 static const pixman_fast_path_t noop_fast_paths[] =
 {
     { PIXMAN_OP_DST, PIXMAN_any, 0, PIXMAN_any, 0, PIXMAN_any, 0, noop_composite },
@@ -203,8 +155,6 @@ _pixman_implementation_create_noop (pixman_implementation_t *fallback)
     pixman_implementation_t *imp =
 	_pixman_implementation_create (fallback, noop_fast_paths);
  
-    imp->src_iter_init = noop_src_iter_init;
-    imp->dest_iter_init = noop_dest_iter_init;
     imp->iter_info = noop_iters;
 
     return imp;

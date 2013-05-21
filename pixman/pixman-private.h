@@ -474,8 +474,6 @@ typedef pixman_bool_t (*pixman_fill_func_t) (pixman_implementation_t *imp,
 					     int                      width,
 					     int                      height,
 					     uint32_t                 filler);
-typedef pixman_bool_t (*pixman_iter_init_func_t) (pixman_implementation_t *imp,
-						  pixman_iter_t           *iter);
 
 void _pixman_setup_combiner_functions_32 (pixman_implementation_t *imp);
 void _pixman_setup_combiner_functions_float (pixman_implementation_t *imp);
@@ -501,8 +499,6 @@ struct pixman_implementation_t
 
     pixman_blt_func_t		blt;
     pixman_fill_func_t		fill;
-    pixman_iter_init_func_t     src_iter_init;
-    pixman_iter_init_func_t     dest_iter_init;
 
     pixman_combine_32_func_t	combine_32[PIXMAN_N_OPERATORS];
     pixman_combine_32_func_t	combine_32_ca[PIXMAN_N_OPERATORS];
@@ -574,30 +570,6 @@ _pixman_implementation_iter_init (pixman_implementation_t       *imp,
                                   uint8_t                       *buffer,
                                   iter_flags_t                   flags,
                                   uint32_t                       image_flags);
-
-pixman_bool_t
-_pixman_implementation_src_iter_init (pixman_implementation_t       *imp,
-				      pixman_iter_t                 *iter,
-				      pixman_image_t                *image,
-				      int                            x,
-				      int                            y,
-				      int                            width,
-				      int                            height,
-				      uint8_t                       *buffer,
-				      iter_flags_t                   flags,
-				      uint32_t                       image_flags);
-
-pixman_bool_t
-_pixman_implementation_dest_iter_init (pixman_implementation_t       *imp,
-				       pixman_iter_t                 *iter,
-				       pixman_image_t                *image,
-				       int                            x,
-				       int                            y,
-				       int                            width,
-				       int                            height,
-				       uint8_t                       *buffer,
-				       iter_flags_t                   flags,
-				       uint32_t                       image_flags);
 
 /* Specific implementations */
 pixman_implementation_t *

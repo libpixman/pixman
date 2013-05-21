@@ -3951,30 +3951,6 @@ static const pixman_iter_info_t mmx_iters[] =
     { PIXMAN_null },
 };
 
-static pixman_bool_t
-mmx_src_iter_init (pixman_implementation_t *imp, pixman_iter_t *iter)
-{
-    const pixman_iter_info_t *info;
-
-    for (info = mmx_iters; info->format != PIXMAN_null; ++info)
-    {
-	if ((info->format == PIXMAN_any ||
-	     info->format == iter->image->common.extended_format_code)	 &&
-	    (info->image_flags & iter->image_flags) == info->image_flags &&
-	    (info->iter_flags & iter->iter_flags) == info->iter_flags)
-	{
-	    iter->get_scanline = info->get_scanline;
-	    iter->write_back = info->write_back;
-
-	    if (info->initializer)
-		info->initializer (iter, info);
-	    return TRUE;
-	}
-    }
-
-    return FALSE;
-}
-
 static const pixman_fast_path_t mmx_fast_paths[] =
 {
     PIXMAN_STD_FAST_PATH    (OVER, solid,    a8,       r5g6b5,   mmx_composite_over_n_8_0565       ),
@@ -4104,7 +4080,6 @@ _pixman_implementation_create_mmx (pixman_implementation_t *fallback)
     imp->fill = mmx_fill;
 
     imp->iter_info = mmx_iters;
-    imp->src_iter_init = mmx_src_iter_init;
 
     return imp;
 }

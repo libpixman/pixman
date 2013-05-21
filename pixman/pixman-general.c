@@ -79,42 +79,6 @@ static const pixman_iter_info_t general_iters[] =
     { PIXMAN_null },
 };
 
-static pixman_bool_t
-general_iter_init_common (pixman_implementation_t *imp, pixman_iter_t *iter)
-{
-    const pixman_iter_info_t *info;
-
-    for (info = general_iters; info->format != PIXMAN_null; ++info)
-    {
-	if ((info->format == PIXMAN_any ||
-	     info->format == iter->image->common.extended_format_code)	 &&
-	    (info->image_flags & iter->image_flags) == info->image_flags &&
-	    (info->iter_flags & iter->iter_flags) == info->iter_flags)
-	{
-	    iter->get_scanline = info->get_scanline;
-	    iter->write_back = info->write_back;
-
-	    if (info->initializer)
-		info->initializer (iter, info);
-	    return TRUE;
-	}
-    }
-
-    return FALSE;
-}
-
-static pixman_bool_t
-general_src_iter_init (pixman_implementation_t *imp, pixman_iter_t *iter)
-{
-    return general_iter_init_common (imp, iter);
-}
-
-static pixman_bool_t
-general_dest_iter_init (pixman_implementation_t *imp, pixman_iter_t *iter)
-{
-    return general_iter_init_common (imp, iter);
-}
-
 typedef struct op_info_t op_info_t;
 struct op_info_t
 {
@@ -262,8 +226,6 @@ _pixman_implementation_create_general (void)
     _pixman_setup_combiner_functions_32 (imp);
     _pixman_setup_combiner_functions_float (imp);
 
-    imp->src_iter_init = general_src_iter_init;
-    imp->dest_iter_init = general_dest_iter_init;
     imp->iter_info = general_iters;
 
     return imp;

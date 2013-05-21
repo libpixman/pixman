@@ -2292,50 +2292,12 @@ static const pixman_iter_info_t fast_iters[] =
     { PIXMAN_null },
 };
 
-static pixman_bool_t
-fast_iter_init_common (pixman_implementation_t *imp, pixman_iter_t *iter)
-{
-    const pixman_iter_info_t *info;
-
-    for (info = fast_iters; info->format != PIXMAN_null; ++info)
-    {
-	if ((info->format == PIXMAN_any ||
-	     info->format == iter->image->common.extended_format_code)	 &&
-	    (info->image_flags & iter->image_flags) == info->image_flags &&
-	    (info->iter_flags & iter->iter_flags) == info->iter_flags)
-	{
-	    iter->get_scanline = info->get_scanline;
-	    iter->write_back = info->write_back;
-
-	    if (info->initializer)
-		info->initializer (iter, info);
-	    return TRUE;
-	}
-    }
-
-    return FALSE;
-}
-
-static pixman_bool_t
-fast_src_iter_init (pixman_implementation_t *imp, pixman_iter_t *iter)
-{
-    return fast_iter_init_common (imp, iter);
-}
-
-static pixman_bool_t
-fast_dest_iter_init (pixman_implementation_t *imp, pixman_iter_t *iter)
-{
-    return fast_iter_init_common (imp, iter);
-}
-
 pixman_implementation_t *
 _pixman_implementation_create_fast_path (pixman_implementation_t *fallback)
 {
     pixman_implementation_t *imp = _pixman_implementation_create (fallback, c_fast_paths);
 
     imp->fill = fast_path_fill;
-    imp->src_iter_init = fast_src_iter_init;
-    imp->dest_iter_init = fast_dest_iter_init;
     imp->iter_info = fast_iters;
 
     return imp;
