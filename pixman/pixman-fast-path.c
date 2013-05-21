@@ -2336,6 +2336,7 @@ _pixman_implementation_create_fast_path (pixman_implementation_t *fallback)
     imp->fill = fast_path_fill;
     imp->src_iter_init = fast_src_iter_init;
     imp->dest_iter_init = fast_dest_iter_init;
+    imp->iter_info = fast_iters;
 
     return imp;
 }

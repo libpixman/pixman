@@ -196,9 +196,10 @@ general_composite_rect  (pixman_implementation_t *imp,
     /* src iter */
     src_iter_flags = width_flag | op_flags[op].src | ITER_SRC;
 
-    _pixman_implementation_src_iter_init (imp->toplevel, &src_iter, src_image,
-					  src_x, src_y, width, height,
-					  src_buffer, src_iter_flags, info->src_flags);
+    _pixman_implementation_iter_init (imp->toplevel, &src_iter, src_image,
+                                      src_x, src_y, width, height,
+                                      src_buffer, src_iter_flags,
+                                      info->src_flags);
 
     /* mask iter */
     if ((src_iter_flags & (ITER_IGNORE_ALPHA | ITER_IGNORE_RGB)) ==
@@ -216,14 +217,14 @@ general_composite_rect  (pixman_implementation_t *imp,
         mask_image->common.component_alpha    &&
         PIXMAN_FORMAT_RGB (mask_image->bits.format);
 
-    _pixman_implementation_src_iter_init (
+    _pixman_implementation_iter_init (
 	imp->toplevel, &mask_iter,
 	mask_image, mask_x, mask_y, width, height, mask_buffer,
 	ITER_SRC | width_flag | (component_alpha? 0 : ITER_IGNORE_RGB),
 	info->mask_flags);
 
     /* dest iter */
-    _pixman_implementation_dest_iter_init (
+    _pixman_implementation_iter_init (
 	imp->toplevel, &dest_iter, dest_image, dest_x, dest_y, width, height,
 	dest_buffer, ITER_DEST | width_flag | op_flags[op].dst, info->dest_flags);
 
@@ -263,6 +264,7 @@ _pixman_implementation_create_general (void)
 
     imp->src_iter_init = general_src_iter_init;
     imp->dest_iter_init = general_dest_iter_init;
+    imp->iter_info = general_iters;
 
     return imp;
 }

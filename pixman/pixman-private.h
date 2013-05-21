@@ -497,6 +497,7 @@ struct pixman_implementation_t
     pixman_implementation_t *	toplevel;
     pixman_implementation_t *	fallback;
     const pixman_fast_path_t *	fast_paths;
+    const pixman_iter_info_t *  iter_info;
 
     pixman_blt_func_t		blt;
     pixman_fill_func_t		fill;
@@ -561,6 +562,18 @@ _pixman_implementation_fill (pixman_implementation_t *imp,
                              int                      width,
                              int                      height,
                              uint32_t                 filler);
+
+void
+_pixman_implementation_iter_init (pixman_implementation_t       *imp,
+                                  pixman_iter_t                 *iter,
+                                  pixman_image_t                *image,
+                                  int                            x,
+                                  int                            y,
+                                  int                            width,
+                                  int                            height,
+                                  uint8_t                       *buffer,
+                                  iter_flags_t                   flags,
+                                  uint32_t                       image_flags);
 
 pixman_bool_t
 _pixman_implementation_src_iter_init (pixman_implementation_t       *imp,

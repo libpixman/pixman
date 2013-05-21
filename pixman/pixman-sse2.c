@@ -6449,6 +6449,7 @@ _pixman_implementation_create_sse2 (pixman_implementation_t *fallback)
     imp->blt = sse2_blt;
     imp->fill = sse2_fill;
 
+    imp->iter_info = sse2_iters;
     imp->src_iter_init = sse2_src_iter_init;
 
     return imp;

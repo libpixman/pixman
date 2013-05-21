@@ -920,7 +920,7 @@ _pixman_image_get_solid (pixman_implementation_t *imp,
 	pixman_iter_t iter;
 
     otherwise:
-	_pixman_implementation_src_iter_init (
+	_pixman_implementation_iter_init (
 	    imp, &iter, image, 0, 0, 1, 1,
 	    (uint8_t *)&result,
 	    ITER_NARROW | ITER_SRC, image->common.flags);

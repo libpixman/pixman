@@ -205,6 +205,7 @@ _pixman_implementation_create_noop (pixman_implementation_t *fallback)
  
     imp->src_iter_init = noop_src_iter_init;
     imp->dest_iter_init = noop_dest_iter_init;
+    imp->iter_info = noop_iters;
 
     return imp;
 }

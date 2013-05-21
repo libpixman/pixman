@@ -4103,6 +4103,7 @@ _pixman_implementation_create_mmx (pixman_implementation_t *fallback)
     imp->blt = mmx_blt;
     imp->fill = mmx_fill;
 
+    imp->iter_info = mmx_iters;
     imp->src_iter_init = mmx_src_iter_init;
 
     return imp;
