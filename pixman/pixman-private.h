@@ -262,6 +262,19 @@ struct pixman_iter_t
     int				stride;
 };
 
+typedef struct pixman_iter_info_t pixman_iter_info_t;
+typedef void (* pixman_iter_initializer_t) (pixman_iter_t *iter,
+                                            const pixman_iter_info_t *info);
+struct pixman_iter_info_t
+{
+    pixman_format_code_t	format;
+    uint32_t			image_flags;
+    iter_flags_t		iter_flags;
+    pixman_iter_initializer_t	initializer;
+    pixman_iter_get_scanline_t	get_scanline;
+    pixman_iter_write_back_t	write_back;
+};
+
 void
 _pixman_bits_image_setup_accessors (bits_image_t *image);
 
