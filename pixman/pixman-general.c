@@ -37,42 +37,82 @@
 #include <string.h>
 #include "pixman-private.h"
 
-static pixman_bool_t
-general_src_iter_init (pixman_implementation_t *imp, pixman_iter_t *iter)
+static void
+general_iter_init (pixman_iter_t *iter, const pixman_iter_info_t *info)
 {
     pixman_image_t *image = iter->image;
 
-    if (image->type == LINEAR)
-	_pixman_linear_gradient_iter_init (image, iter);
-    else if (image->type == RADIAL)
-	_pixman_radial_gradient_iter_init (image, iter);
-    else if (image->type == CONICAL)
-	_pixman_conical_gradient_iter_init (image, iter);
-    else if (image->type == BITS)
-	_pixman_bits_image_src_iter_init (image, iter);
-    else if (image->type == SOLID)
-        _pixman_log_error (FUNC, "Solid image not handled by noop");
-    else         
-	_pixman_log_error (FUNC, "Pixman bug: unknown image type\n");
+    switch (image->type)
+    {
+    case BITS:
+        if ((iter->iter_flags & ITER_SRC) == ITER_SRC)
+            _pixman_bits_image_src_iter_init (image, iter);
+        else
+            _pixman_bits_image_dest_iter_init (image, iter);
+        break;
 
-    return TRUE;
+    case LINEAR:
+        _pixman_linear_gradient_iter_init (image, iter);
+        break;
+
+    case RADIAL:
+	_pixman_radial_gradient_iter_init (image, iter);
+        break;
+
+    case CONICAL:
+	_pixman_conical_gradient_iter_init (image, iter);
+        break;
+
+    case SOLID:
+        _pixman_log_error (FUNC, "Solid image not handled by noop");
+        break;
+
+    default:
+	_pixman_log_error (FUNC, "Pixman bug: unknown image type\n");
+        break;
+    }
+}
+
+static const pixman_iter_info_t general_iters[] =
+{
+    { PIXMAN_any, 0, 0, general_iter_init, NULL, NULL },
+    { PIXMAN_null },
+};
+
+static pixman_bool_t
+general_iter_init_common (pixman_implementation_t *imp, pixman_iter_t *iter)
+{
+    const pixman_iter_info_t *info;
+
+    for (info = general_iters; info->format != PIXMAN_null; ++info)
+    {
+	if ((info->format == PIXMAN_any ||
+	     info->format == iter->image->common.extended_format_code)	 &&
+	    (info->image_flags & iter->image_flags) == info->image_flags &&
+	    (info->iter_flags & iter->iter_flags) == info->iter_flags)
+	{
+	    iter->get_scanline = info->get_scanline;
+	    iter->write_back = info->write_back;
+
+	    if (info->initializer)
+		info->initializer (iter, info);
+	    return TRUE;
+	}
+    }
+
+    return FALSE;
+}
+
+static pixman_bool_t
+general_src_iter_init (pixman_implementation_t *imp, pixman_iter_t *iter)
+{
+    return general_iter_init_common (imp, iter);
 }
 
 static pixman_bool_t
 general_dest_iter_init (pixman_implementation_t *imp, pixman_iter_t *iter)
 {
-    if (iter->image->type == BITS)
-    {
-	_pixman_bits_image_dest_iter_init (iter->image, iter);
-
-	return TRUE;
-    }
-    else
-    {
-	_pixman_log_error (FUNC, "Trying to write to a non-writable image");
-
-	return FALSE;
-    }
+    return general_iter_init_common (imp, iter);
 }
 
 typedef struct op_info_t op_info_t;
