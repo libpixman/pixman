@@ -2261,17 +2261,6 @@ fast_write_back_r5g6b5 (pixman_iter_t *iter)
     }
 }
 
-static void
-iter_init_bits_stride (pixman_iter_t *iter, const pixman_iter_info_t *info)
-{
-    pixman_image_t *image = iter->image;
-    uint8_t *b = (uint8_t *)image->bits.bits;
-    int s = image->bits.rowstride * 4;
-
-    iter->bits = b + s * iter->y + iter->x * PIXMAN_FORMAT_BPP (info->format) / 8;
-    iter->stride = s;
-}
-
 #define IMAGE_FLAGS							\
     (FAST_PATH_STANDARD_FLAGS | FAST_PATH_ID_TRANSFORM |		\
      FAST_PATH_BITS_IMAGE | FAST_PATH_SAMPLES_COVER_CLIP_NEAREST)
@@ -2279,15 +2268,17 @@ iter_init_bits_stride (pixman_iter_t *iter, const pixman_iter_info_t *info)
 static const pixman_iter_info_t fast_iters[] = 
 {
     { PIXMAN_r5g6b5, IMAGE_FLAGS, ITER_NARROW | ITER_SRC,
-      iter_init_bits_stride, fast_fetch_r5g6b5, NULL },
+      _pixman_iter_init_bits_stride, fast_fetch_r5g6b5, NULL },
 
     { PIXMAN_r5g6b5, FAST_PATH_STD_DEST_FLAGS,
       ITER_NARROW | ITER_DEST,
-      iter_init_bits_stride, fast_fetch_r5g6b5, fast_write_back_r5g6b5 },
+      _pixman_iter_init_bits_stride,
+      fast_fetch_r5g6b5, fast_write_back_r5g6b5 },
     
     { PIXMAN_r5g6b5, FAST_PATH_STD_DEST_FLAGS,
       ITER_NARROW | ITER_DEST | ITER_IGNORE_RGB | ITER_IGNORE_ALPHA,
-      iter_init_bits_stride, fast_dest_fetch_noop, fast_write_back_r5g6b5 },
+      _pixman_iter_init_bits_stride,
+      fast_dest_fetch_noop, fast_write_back_r5g6b5 },
 
     { PIXMAN_null },
 };

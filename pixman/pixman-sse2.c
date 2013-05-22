@@ -6340,17 +6340,6 @@ sse2_fetch_a8 (pixman_iter_t *iter, const uint32_t *mask)
     return iter->buffer;
 }
 
-static void
-iter_init_bits_stride (pixman_iter_t *iter, const pixman_iter_info_t *info)
-{
-    pixman_image_t *image = iter->image;
-    uint8_t *b = (uint8_t *)image->bits.bits;
-    int s = image->bits.rowstride * 4;
-
-    iter->bits = b + s * iter->y + iter->x * PIXMAN_FORMAT_BPP (info->format) / 8;
-    iter->stride = s;
-}
-
 #define IMAGE_FLAGS							\
     (FAST_PATH_STANDARD_FLAGS | FAST_PATH_ID_TRANSFORM |		\
      FAST_PATH_BITS_IMAGE | FAST_PATH_SAMPLES_COVER_CLIP_NEAREST)
@@ -6358,13 +6347,13 @@ iter_init_bits_stride (pixman_iter_t *iter, const pixman_iter_info_t *info)
 static const pixman_iter_info_t sse2_iters[] = 
 {
     { PIXMAN_x8r8g8b8, IMAGE_FLAGS, ITER_NARROW,
-      iter_init_bits_stride, sse2_fetch_x8r8g8b8, NULL
+      _pixman_iter_init_bits_stride, sse2_fetch_x8r8g8b8, NULL
     },
     { PIXMAN_r5g6b5, IMAGE_FLAGS, ITER_NARROW,
-      iter_init_bits_stride, sse2_fetch_r5g6b5, NULL
+      _pixman_iter_init_bits_stride, sse2_fetch_r5g6b5, NULL
     },
     { PIXMAN_a8, IMAGE_FLAGS, ITER_NARROW,
-      iter_init_bits_stride, sse2_fetch_a8, NULL
+      _pixman_iter_init_bits_stride, sse2_fetch_a8, NULL
     },
     { PIXMAN_null },
 };

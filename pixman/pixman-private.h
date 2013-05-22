@@ -652,6 +652,9 @@ _pixman_compute_composite_region32 (pixman_region32_t * region,
 uint32_t *
 _pixman_iter_get_scanline_noop (pixman_iter_t *iter, const uint32_t *mask);
 
+void
+_pixman_iter_init_bits_stride (pixman_iter_t *iter, const pixman_iter_info_t *info);
+
 /* These "formats" all have depth 0, so they
  * will never clash with any real ones
  */
