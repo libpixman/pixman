@@ -787,6 +787,9 @@ pixman_malloc_ab (unsigned int n, unsigned int b);
 void *
 pixman_malloc_abc (unsigned int a, unsigned int b, unsigned int c);
 
+void *
+pixman_malloc_ab_plus_c (unsigned int a, unsigned int b, unsigned int c);
+
 pixman_bool_t
 _pixman_multiply_overflows_size (size_t a, size_t b);
 
