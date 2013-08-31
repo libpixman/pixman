@@ -2481,6 +2481,221 @@ fail:
     iter->fini = NULL;
 }
 
+static uint32_t *
+bits_image_fetch_bilinear_no_repeat_8888 (pixman_iter_t *iter,
+					  const uint32_t *mask)
+{
+
+    pixman_image_t * ima = iter->image;
+    int              offset = iter->x;
+    int              line = iter->y++;
+    int              width = iter->width;
+    uint32_t *       buffer = iter->buffer;
+
+    bits_image_t *bits = &ima->bits;
+    pixman_fixed_t x_top, x_bottom, x;
+    pixman_fixed_t ux_top, ux_bottom, ux;
+    pixman_vector_t v;
+    uint32_t top_mask, bottom_mask;
+    uint32_t *top_row;
+    uint32_t *bottom_row;
+    uint32_t *end;
+    uint32_t zero[2] = { 0, 0 };
+    uint32_t one = 1;
+    int y, y1, y2;
+    int disty;
+    int mask_inc;
+    int w;
+
+    /* reference point is the center of the pixel */
+    v.vector[0] = pixman_int_to_fixed (offset) + pixman_fixed_1 / 2;
+    v.vector[1] = pixman_int_to_fixed (line) + pixman_fixed_1 / 2;
+    v.vector[2] = pixman_fixed_1;
+
+    if (!pixman_transform_point_3d (bits->common.transform, &v))
+	return iter->buffer;
+
+    ux = ux_top = ux_bottom = bits->common.transform->matrix[0][0];
+    x = x_top = x_bottom = v.vector[0] - pixman_fixed_1/2;
+
+    y = v.vector[1] - pixman_fixed_1/2;
+    disty = pixman_fixed_to_bilinear_weight (y);
+
+    /* Load the pointers to the first and second lines from the source
+     * image that bilinear code must read.
+     *
+     * The main trick in this code is about the check if any line are
+     * outside of the image;
+     *
+     * When I realize that a line (any one) is outside, I change
+     * the pointer to a dummy area with zeros. Once I change this, I
+     * must be sure the pointer will not change, so I set the
+     * variables to each pointer increments inside the loop.
+     */
+    y1 = pixman_fixed_to_int (y);
+    y2 = y1 + 1;
+
+    if (y1 < 0 || y1 >= bits->height)
+    {
+	top_row = zero;
+	x_top = 0;
+	ux_top = 0;
+    }
+    else
+    {
+	top_row = bits->bits + y1 * bits->rowstride;
+	x_top = x;
+	ux_top = ux;
+    }
+
+    if (y2 < 0 || y2 >= bits->height)
+    {
+	bottom_row = zero;
+	x_bottom = 0;
+	ux_bottom = 0;
+    }
+    else
+    {
+	bottom_row = bits->bits + y2 * bits->rowstride;
+	x_bottom = x;
+	ux_bottom = ux;
+    }
+
+    /* Instead of checking whether the operation uses the mast in
+     * each loop iteration, verify this only once and prepare the
+     * variables to make the code smaller inside the loop.
+     */
+    if (!mask)
+    {
+        mask_inc = 0;
+        mask = &one;
+    }
+    else
+    {
+        /* If have a mask, prepare the variables to check it */
+        mask_inc = 1;
+    }
+
+    /* If both are zero, then the whole thing is zero */
+    if (top_row == zero && bottom_row == zero)
+    {
+	memset (buffer, 0, width * sizeof (uint32_t));
+	return iter->buffer;
+    }
+    else if (bits->format == PIXMAN_x8r8g8b8)
+    {
+	if (top_row == zero)
+	{
+	    top_mask = 0;
+	    bottom_mask = 0xff000000;
+	}
+	else if (bottom_row == zero)
+	{
+	    top_mask = 0xff000000;
+	    bottom_mask = 0;
+	}
+	else
+	{
+	    top_mask = 0xff000000;
+	    bottom_mask = 0xff000000;
+	}
+    }
+    else
+    {
+	top_mask = 0;
+	bottom_mask = 0;
+    }
+
+    end = buffer + width;
+
+    /* Zero fill to the left of the image */
+    while (buffer < end && x < pixman_fixed_minus_1)
+    {
+	*buffer++ = 0;
+	x += ux;
+	x_top += ux_top;
+	x_bottom += ux_bottom;
+	mask += mask_inc;
+    }
+
+    /* Left edge
+     */
+    while (buffer < end && x < 0)
+    {
+	uint32_t tr, br;
+	int32_t distx;
+
+	tr = top_row[pixman_fixed_to_int (x_top) + 1] | top_mask;
+	br = bottom_row[pixman_fixed_to_int (x_bottom) + 1] | bottom_mask;
+
+	distx = pixman_fixed_to_bilinear_weight (x);
+
+	*buffer++ = bilinear_interpolation (0, tr, 0, br, distx, disty);
+
+	x += ux;
+	x_top += ux_top;
+	x_bottom += ux_bottom;
+	mask += mask_inc;
+    }
+
+    /* Main part */
+    w = pixman_int_to_fixed (bits->width - 1);
+
+    while (buffer < end  &&  x < w)
+    {
+	if (*mask)
+	{
+	    uint32_t tl, tr, bl, br;
+	    int32_t distx;
+
+	    tl = top_row [pixman_fixed_to_int (x_top)] | top_mask;
+	    tr = top_row [pixman_fixed_to_int (x_top) + 1] | top_mask;
+	    bl = bottom_row [pixman_fixed_to_int (x_bottom)] | bottom_mask;
+	    br = bottom_row [pixman_fixed_to_int (x_bottom) + 1] | bottom_mask;
+
+	    distx = pixman_fixed_to_bilinear_weight (x);
+
+	    *buffer = bilinear_interpolation (tl, tr, bl, br, distx, disty);
+	}
+
+	buffer++;
+	x += ux;
+	x_top += ux_top;
+	x_bottom += ux_bottom;
+	mask += mask_inc;
+    }
+
+    /* Right Edge */
+    w = pixman_int_to_fixed (bits->width);
+    while (buffer < end  &&  x < w)
+    {
+	if (*mask)
+	{
+	    uint32_t tl, bl;
+	    int32_t distx;
+
+	    tl = top_row [pixman_fixed_to_int (x_top)] | top_mask;
+	    bl = bottom_row [pixman_fixed_to_int (x_bottom)] | bottom_mask;
+
+	    distx = pixman_fixed_to_bilinear_weight (x);
+
+	    *buffer = bilinear_interpolation (tl, 0, bl, 0, distx, disty);
+	}
+
+	buffer++;
+	x += ux;
+	x_top += ux_top;
+	x_bottom += ux_bottom;
+	mask += mask_inc;
+    }
+
+    /* Zero fill to the left of the image */
+    while (buffer < end)
+	*buffer++ = 0;
+
+    return iter->buffer;
+}
+
 #define IMAGE_FLAGS							\
     (FAST_PATH_STANDARD_FLAGS | FAST_PATH_ID_TRANSFORM |		\
      FAST_PATH_BITS_IMAGE | FAST_PATH_SAMPLES_COVER_CLIP_NEAREST)
@@ -2508,6 +2723,28 @@ static const pixman_iter_info_t fast_iters[] =
       ITER_NARROW | ITER_SRC,
       fast_bilinear_cover_iter_init,
       NULL, NULL
+    },
+
+#define FAST_BILINEAR_FLAGS						\
+    (FAST_PATH_NO_ALPHA_MAP		|				\
+     FAST_PATH_NO_ACCESSORS		|				\
+     FAST_PATH_HAS_TRANSFORM		|				\
+     FAST_PATH_AFFINE_TRANSFORM		|				\
+     FAST_PATH_X_UNIT_POSITIVE		|				\
+     FAST_PATH_Y_UNIT_ZERO		|				\
+     FAST_PATH_NONE_REPEAT		|				\
+     FAST_PATH_BILINEAR_FILTER)
+
+    { PIXMAN_a8r8g8b8,
+      FAST_BILINEAR_FLAGS,
+      ITER_NARROW | ITER_SRC,
+      NULL, bits_image_fetch_bilinear_no_repeat_8888, NULL
+    },
+
+    { PIXMAN_x8r8g8b8,
+      FAST_BILINEAR_FLAGS,
+      ITER_NARROW | ITER_SRC,
+      NULL, bits_image_fetch_bilinear_no_repeat_8888, NULL
     },
 
     { PIXMAN_null },
