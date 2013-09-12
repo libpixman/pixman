@@ -222,7 +222,6 @@ static pixman_format_code_t mask_fmt_list[] = {
 uint32_t
 test_composite (int testnum, int verbose)
 {
-    int i;
     pixman_image_t *src_img = NULL;
     pixman_image_t *dst_img = NULL;
     pixman_image_t *mask_img = NULL;
@@ -355,23 +354,7 @@ test_composite (int testnum, int verbose)
 			    src_x, src_y, mask_x, mask_y, dst_x, dst_y, w, h);
 
     if (verbose)
-    {
-	int j;
-
-	printf ("---\n");
-	for (i = 0; i < dst_height; i++)
-	{
-	    for (j = 0; j < dst_stride; j++)
-	    {
-		if (j == (dst_width * PIXMAN_FORMAT_BPP (dst_fmt) + 7) / 8)
-		    printf ("| ");
-
-		printf ("%02X ", *((uint8_t *)dstbuf + i * dst_stride + j));
-	    }
-	    printf ("\n");
-	}
-	printf ("---\n");
-    }
+	print_image (dst_img);
 
     free_random_image (0, src_img, PIXMAN_null);
     crc32 = free_random_image (0, dst_img, dst_fmt);

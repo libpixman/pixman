@@ -217,17 +217,7 @@ test_composite (int      testnum,
     crc32 = compute_crc32_for_image (0, dst_img);
 
     if (verbose)
-    {
-	int j;
-	
-	for (i = 0; i < dst_height; i++)
-	{
-	    for (j = 0; j < dst_stride; j++)
-		printf ("%02X ", *((uint8_t *)dst_bits + i * dst_stride + j));
-
-	    printf ("\n");
-	}
-    }
+	print_image (dst_img);
 
     fence_free (dst_bits);
     
