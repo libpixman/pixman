@@ -147,6 +147,24 @@ test_composite (int      testnum,
     src_fmt = get_format (src_bpp);
     dst_fmt = get_format (dst_bpp);
 
+    if (prng_rand_n (2))
+    {
+	srcbuf += (src_stride / 4) * (src_height - 1);
+	src_stride = - src_stride;
+    }
+
+    if (prng_rand_n (2))
+    {
+	maskbuf += (mask_stride / 4) * (mask_height - 1);
+	mask_stride = - mask_stride;
+    }
+
+    if (prng_rand_n (2))
+    {
+	dstbuf += (dst_stride / 4) * (dst_height - 1);
+	dst_stride = - dst_stride;
+    }
+
     src_img = pixman_image_create_bits (
         src_fmt, src_width, src_height, srcbuf, src_stride);
 
@@ -349,6 +367,15 @@ test_composite (int      testnum,
     pixman_image_unref (mask_img);
     pixman_image_unref (dst_img);
 
+    if (src_stride < 0)
+	srcbuf += (src_stride / 4) * (src_height - 1);
+
+    if (mask_stride < 0)
+	maskbuf += (mask_stride / 4) * (mask_height - 1);
+
+    if (dst_stride < 0)
+	dstbuf += (dst_stride / 4) * (dst_height - 1);
+
     free (srcbuf);
     free (maskbuf);
     free (dstbuf);
@@ -358,9 +385,9 @@ test_composite (int      testnum,
 }
 
 #if BILINEAR_INTERPOLATION_BITS == 7
-#define CHECKSUM 0xCE8EC6BA
+#define CHECKSUM 0x92E0F068
 #elif BILINEAR_INTERPOLATION_BITS == 4
-#define CHECKSUM 0xAB1D39BE
+#define CHECKSUM 0x8EFFA1E5
 #else
 #define CHECKSUM 0x00000000
 #endif

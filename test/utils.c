@@ -150,6 +150,12 @@ compute_crc32_for_image_internal (uint32_t        crc32,
     uint32_t mask = 0xffffffff;
     int i;
 
+    if (stride < 0)
+    {
+	data += (stride / 4) * (height - 1);
+	stride = - stride;
+    }
+
     /* mask unused 'x' part */
     if (PIXMAN_FORMAT_BPP (fmt) - PIXMAN_FORMAT_DEPTH (fmt) &&
 	PIXMAN_FORMAT_DEPTH (fmt) != 0)

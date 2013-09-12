@@ -57,6 +57,13 @@ create_random_image (pixman_format_code_t *allowed_formats,
 	prng_randmemset (buf, stride * height, RANDMEMSET_MORE_00_AND_FF);
     }
 
+    /* test negative stride */
+    if (prng_rand_n (4) == 0)
+    {
+	buf += (stride / 4) * (height - 1);
+	stride = - stride;
+    }
+    
     img = pixman_image_create_bits (fmt, width, height, buf, stride);
 
     if (PIXMAN_FORMAT_TYPE (fmt) == PIXMAN_TYPE_COLOR)
@@ -88,6 +95,9 @@ free_random_image (uint32_t initcrc,
 
     if (fmt != PIXMAN_null)
 	crc32 = compute_crc32_for_image (initcrc, img);
+
+    if (img->bits.rowstride < 0)
+	data += img->bits.rowstride * (img->bits.height - 1);
 
     pixman_image_unref (img);
     free (data);
@@ -385,6 +395,6 @@ main (int argc, const char *argv[])
     }
 
     return fuzzer_test_main("blitters", 2000000,
-			    0x0CF3283B,
+			    0xAC8FDA98,
 			    test_composite, argc, argv);
 }
