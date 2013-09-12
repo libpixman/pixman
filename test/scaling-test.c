@@ -340,15 +340,8 @@ test_composite (int      testnum,
 	pixman_image_composite (op, src_img, mask_img, dst_img,
                             src_x, src_y, mask_x, mask_y, dst_x, dst_y, w, h);
 
-    if (dst_fmt == PIXMAN_x8r8g8b8 || dst_fmt == PIXMAN_x8b8g8r8)
-    {
-	/* ignore unused part */
-	for (i = 0; i < dst_stride * dst_height / 4; i++)
-	    dstbuf[i] &= 0xFFFFFF;
-    }
-
-    image_endian_swap (dst_img);
-
+    crc32 = compute_crc32_for_image (0, dst_img);
+    
     if (verbose)
     {
 	int j;
@@ -366,7 +359,6 @@ test_composite (int      testnum,
     pixman_image_unref (mask_img);
     pixman_image_unref (dst_img);
 
-    crc32 = compute_crc32 (0, dstbuf, dst_stride * dst_height);
     free (srcbuf);
     free (maskbuf);
     free (dstbuf);

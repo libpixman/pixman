@@ -214,14 +214,7 @@ test_composite (int      testnum,
     pixman_composite_trapezoids (op, src_img, dst_img, mask_format,
 				 src_x, src_y, dst_x, dst_y, n_traps, traps);
 
-    if (dst_format == PIXMAN_x8r8g8b8)
-    {
-	/* ignore unused part */
-	for (i = 0; i < dst_stride * dst_height / 4; i++)
-	    dst_bits[i] &= 0xFFFFFF;
-    }
-
-    image_endian_swap (dst_img);
+    crc32 = compute_crc32_for_image (0, dst_img);
 
     if (verbose)
     {
@@ -235,8 +228,6 @@ test_composite (int      testnum,
 	    printf ("\n");
 	}
     }
-
-    crc32 = compute_crc32 (0, dst_bits, dst_stride * dst_height);
 
     fence_free (dst_bits);
     
