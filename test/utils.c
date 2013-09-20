@@ -251,6 +251,7 @@ print_image (pixman_image_t *image)
     int width, height, stride;
     pixman_format_code_t format;
     uint8_t *buffer;
+    int s;
 
     width = pixman_image_get_width (image);
     height = pixman_image_get_height (image);
@@ -258,13 +259,12 @@ print_image (pixman_image_t *image)
     format = pixman_image_get_format (image);
     buffer = (uint8_t *)pixman_image_get_data (image);
 
-    if (stride < 0)
-	stride = - stride;
+    s = (stride >= 0)? stride : - stride;
     
     printf ("---\n");
     for (i = 0; i < height; i++)
     {
-	for (j = 0; j < stride; j++)
+	for (j = 0; j < s; j++)
 	{
 	    if (j == (width * PIXMAN_FORMAT_BPP (format) + 7) / 8)
 		printf ("| ");
