@@ -5626,10 +5626,10 @@ do {										\
 #define BILINEAR_INTERPOLATE_ONE_PIXEL_HELPER(pix, phase)			\
 do {										\
     __m128i xmm_wh, xmm_a, xmm_b;						\
-    (void)xmm_ux4; /* suppress warning: unused variable 'xmm_ux4' */		\
     /* fetch 2x2 pixel block into sse2 registers */				\
     __m128i tltr = _mm_loadl_epi64 ((__m128i *)&src_top[vx >> 16]);		\
     __m128i blbr = _mm_loadl_epi64 ((__m128i *)&src_bottom[vx >> 16]);		\
+    (void)xmm_ux4; /* suppress warning: unused variable 'xmm_ux4' */		\
     vx += unit_x;								\
     /* vertical interpolation */						\
     xmm_a = _mm_mullo_epi16 (_mm_unpacklo_epi8 (tltr, xmm_zero), xmm_wt);	\
