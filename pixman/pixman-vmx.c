@@ -194,6 +194,18 @@ vmx_combine_over_u_no_mask (uint32_t *      dest,
     vector unsigned char tmp1, tmp2, tmp3, tmp4, edges,
 	dest_mask, src_mask, store_mask;
 
+    while (width && ((uintptr_t)dest & 15))
+    {
+	uint32_t s = *src++;
+	uint32_t d = *dest;
+	uint32_t ia = ALPHA_8 (~s);
+
+	UN8x4_MUL_UN8_ADD_UN8x4 (d, ia, s);
+
+	*dest++ = d;
+	width--;
+    }
+
     COMPUTE_SHIFT_MASKS (dest, src);
 
     /* printf ("%s\n",__PRETTY_FUNCTION__); */
@@ -232,6 +244,22 @@ vmx_combine_over_u_mask (uint32_t *      dest,
     vector unsigned int vdest, vsrc, vmask;
     vector unsigned char tmp1, tmp2, tmp3, tmp4, edges,
 	dest_mask, src_mask, mask_mask, store_mask;
+
+    while (width && ((uintptr_t)dest & 15))
+    {
+	uint32_t m = ALPHA_8 (*mask++);
+	uint32_t s = *src++;
+	uint32_t d = *dest;
+	uint32_t ia;
+
+	UN8x4_MUL_UN8 (s, m);
+
+	ia = ALPHA_8 (~s);
+
+	UN8x4_MUL_UN8_ADD_UN8x4 (d, ia, s);
+	*dest++ = d;
+	width--;
+    }
 
     COMPUTE_SHIFT_MASKC (dest, src, mask);
 
@@ -289,6 +317,17 @@ vmx_combine_over_reverse_u_no_mask (uint32_t *      dest,
     vector unsigned char tmp1, tmp2, tmp3, tmp4, edges,
 	dest_mask, src_mask, store_mask;
 
+    while (width && ((uintptr_t)dest & 15))
+    {
+	uint32_t s = *src++;
+	uint32_t d = *dest;
+	uint32_t ia = ALPHA_8 (~d);
+
+	UN8x4_MUL_UN8_ADD_UN8x4 (s, ia, d);
+	*dest++ = s;
+	width--;
+    }
+
     COMPUTE_SHIFT_MASKS (dest, src);
 
     /* printf ("%s\n",__PRETTY_FUNCTION__); */
@@ -326,6 +365,20 @@ vmx_combine_over_reverse_u_mask (uint32_t *      dest,
     vector unsigned int vdest, vsrc, vmask;
     vector unsigned char tmp1, tmp2, tmp3, tmp4, edges,
 	dest_mask, src_mask, mask_mask, store_mask;
+
+    while (width && ((uintptr_t)dest & 15))
+    {
+	uint32_t m = ALPHA_8 (*mask++);
+	uint32_t s = *src++;
+	uint32_t d = *dest;
+	uint32_t ia = ALPHA_8 (~d);
+
+	UN8x4_MUL_UN8 (s, m);
+
+	UN8x4_MUL_UN8_ADD_UN8x4 (s, ia, d);
+	*dest++ = s;
+	width--;
+    }
 
     COMPUTE_SHIFT_MASKC (dest, src, mask);
 
@@ -382,6 +435,16 @@ vmx_combine_in_u_no_mask (uint32_t *      dest,
     vector unsigned char tmp1, tmp2, tmp3, tmp4, edges,
 	dest_mask, src_mask, store_mask;
 
+    while (width && ((uintptr_t)dest & 15))
+    {
+	uint32_t s = *src++;
+	uint32_t a = ALPHA_8 (*dest);
+
+	UN8x4_MUL_UN8 (s, a);
+	*dest++ = s;
+	width--;
+    }
+
     COMPUTE_SHIFT_MASKS (dest, src);
 
     /* printf ("%s\n",__PRETTY_FUNCTION__); */
@@ -417,6 +480,19 @@ vmx_combine_in_u_mask (uint32_t *      dest,
     vector unsigned int vdest, vsrc, vmask;
     vector unsigned char tmp1, tmp2, tmp3, tmp4, edges,
 	dest_mask, src_mask, mask_mask, store_mask;
+
+    while (width && ((uintptr_t)dest & 15))
+    {
+	uint32_t m = ALPHA_8 (*mask++);
+	uint32_t s = *src++;
+	uint32_t a = ALPHA_8 (*dest);
+
+	UN8x4_MUL_UN8 (s, m);
+	UN8x4_MUL_UN8 (s, a);
+
+	*dest++ = s;
+	width--;
+    }
 
     COMPUTE_SHIFT_MASKC (dest, src, mask);
 
@@ -471,6 +547,17 @@ vmx_combine_in_reverse_u_no_mask (uint32_t *      dest,
     vector unsigned char tmp1, tmp2, tmp3, tmp4, edges,
 	dest_mask, src_mask, store_mask;
 
+    while (width && ((uintptr_t)dest & 15))
+    {
+	uint32_t d = *dest;
+	uint32_t a = ALPHA_8 (*src++);
+
+	UN8x4_MUL_UN8 (d, a);
+
+	*dest++ = d;
+	width--;
+    }
+
     COMPUTE_SHIFT_MASKS (dest, src);
 
     /* printf ("%s\n",__PRETTY_FUNCTION__); */
@@ -507,6 +594,20 @@ vmx_combine_in_reverse_u_mask (uint32_t *      dest,
     vector unsigned int vdest, vsrc, vmask;
     vector unsigned char tmp1, tmp2, tmp3, tmp4, edges,
 	dest_mask, src_mask, mask_mask, store_mask;
+
+    while (width && ((uintptr_t)dest & 15))
+    {
+	uint32_t m = ALPHA_8 (*mask++);
+	uint32_t d = *dest;
+	uint32_t a = *src++;
+
+	UN8x4_MUL_UN8 (a, m);
+	a = ALPHA_8 (a);
+	UN8x4_MUL_UN8 (d, a);
+
+	*dest++ = d;
+	width--;
+    }
 
     COMPUTE_SHIFT_MASKC (dest, src, mask);
 
@@ -562,6 +663,17 @@ vmx_combine_out_u_no_mask (uint32_t *      dest,
     vector unsigned char tmp1, tmp2, tmp3, tmp4, edges,
 	dest_mask, src_mask, store_mask;
 
+    while (width && ((uintptr_t)dest & 15))
+    {
+	uint32_t s = *src++;
+	uint32_t a = ALPHA_8 (~(*dest));
+
+	UN8x4_MUL_UN8 (s, a);
+
+	*dest++ = s;
+	width--;
+    }
+
     COMPUTE_SHIFT_MASKS (dest, src);
 
     /* printf ("%s\n",__PRETTY_FUNCTION__); */
@@ -598,6 +710,19 @@ vmx_combine_out_u_mask (uint32_t *      dest,
     vector unsigned int vdest, vsrc, vmask;
     vector unsigned char tmp1, tmp2, tmp3, tmp4, edges,
 	dest_mask, src_mask, mask_mask, store_mask;
+
+    while (width && ((uintptr_t)dest & 15))
+    {
+	uint32_t m = ALPHA_8 (*mask++);
+	uint32_t s = *src++;
+	uint32_t a = ALPHA_8 (~(*dest));
+
+	UN8x4_MUL_UN8 (s, m);
+	UN8x4_MUL_UN8 (s, a);
+
+	*dest++ = s;
+	width--;
+    }
 
     COMPUTE_SHIFT_MASKC (dest, src, mask);
 
@@ -652,6 +777,17 @@ vmx_combine_out_reverse_u_no_mask (uint32_t *      dest,
     vector unsigned char tmp1, tmp2, tmp3, tmp4, edges,
 	dest_mask, src_mask, store_mask;
 
+    while (width && ((uintptr_t)dest & 15))
+    {
+	uint32_t d = *dest;
+	uint32_t a = ALPHA_8 (~(*src++));
+
+	UN8x4_MUL_UN8 (d, a);
+
+	*dest++ = d;
+	width--;
+    }
+
     COMPUTE_SHIFT_MASKS (dest, src);
 
     /* printf ("%s\n",__PRETTY_FUNCTION__); */
@@ -689,6 +825,20 @@ vmx_combine_out_reverse_u_mask (uint32_t *      dest,
     vector unsigned int vdest, vsrc, vmask;
     vector unsigned char tmp1, tmp2, tmp3, tmp4, edges,
 	dest_mask, src_mask, mask_mask, store_mask;
+
+    while (width && ((uintptr_t)dest & 15))
+    {
+	uint32_t m = ALPHA_8 (*mask++);
+	uint32_t d = *dest;
+	uint32_t a = *src++;
+
+	UN8x4_MUL_UN8 (a, m);
+	a = ALPHA_8 (~a);
+	UN8x4_MUL_UN8 (d, a);
+
+	*dest++ = d;
+	width--;
+    }
 
     COMPUTE_SHIFT_MASKC (dest, src, mask);
 
@@ -744,6 +894,19 @@ vmx_combine_atop_u_no_mask (uint32_t *      dest,
     vector unsigned char tmp1, tmp2, tmp3, tmp4, edges,
 	dest_mask, src_mask, store_mask;
 
+    while (width && ((uintptr_t)dest & 15))
+    {
+	uint32_t s = *src++;
+	uint32_t d = *dest;
+	uint32_t dest_a = ALPHA_8 (d);
+	uint32_t src_ia = ALPHA_8 (~s);
+
+	UN8x4_MUL_UN8_ADD_UN8x4_MUL_UN8 (s, dest_a, d, src_ia);
+
+	*dest++ = s;
+	width--;
+    }
+
     COMPUTE_SHIFT_MASKS (dest, src);
 
     /* printf ("%s\n",__PRETTY_FUNCTION__); */
@@ -783,6 +946,24 @@ vmx_combine_atop_u_mask (uint32_t *      dest,
     vector unsigned int vdest, vsrc, vmask;
     vector unsigned char tmp1, tmp2, tmp3, tmp4, edges,
 	dest_mask, src_mask, mask_mask, store_mask;
+
+    while (width && ((uintptr_t)dest & 15))
+    {
+	uint32_t m = ALPHA_8 (*mask++);
+	uint32_t s = *src++;
+	uint32_t d = *dest;
+	uint32_t dest_a = ALPHA_8 (d);
+	uint32_t src_ia;
+
+	UN8x4_MUL_UN8 (s, m);
+
+	src_ia = ALPHA_8 (~s);
+
+	UN8x4_MUL_UN8_ADD_UN8x4_MUL_UN8 (s, dest_a, d, src_ia);
+
+	*dest++ = s;
+	width--;
+    }
 
     COMPUTE_SHIFT_MASKC (dest, src, mask);
 
@@ -843,6 +1024,19 @@ vmx_combine_atop_reverse_u_no_mask (uint32_t *      dest,
     vector unsigned char tmp1, tmp2, tmp3, tmp4, edges,
 	dest_mask, src_mask, store_mask;
 
+    while (width && ((uintptr_t)dest & 15))
+    {
+	uint32_t s = *src++;
+	uint32_t d = *dest;
+	uint32_t src_a = ALPHA_8 (s);
+	uint32_t dest_ia = ALPHA_8 (~d);
+
+	UN8x4_MUL_UN8_ADD_UN8x4_MUL_UN8 (s, dest_ia, d, src_a);
+
+	*dest++ = s;
+	width--;
+    }
+
     COMPUTE_SHIFT_MASKS (dest, src);
 
     /* printf ("%s\n",__PRETTY_FUNCTION__); */
@@ -882,6 +1076,24 @@ vmx_combine_atop_reverse_u_mask (uint32_t *      dest,
     vector unsigned int vdest, vsrc, vmask;
     vector unsigned char tmp1, tmp2, tmp3, tmp4, edges,
 	dest_mask, src_mask, mask_mask, store_mask;
+
+    while (width && ((uintptr_t)dest & 15))
+    {
+	uint32_t m = ALPHA_8 (*mask++);
+	uint32_t s = *src++;
+	uint32_t d = *dest;
+	uint32_t src_a;
+	uint32_t dest_ia = ALPHA_8 (~d);
+
+	UN8x4_MUL_UN8 (s, m);
+
+	src_a = ALPHA_8 (s);
+
+	UN8x4_MUL_UN8_ADD_UN8x4_MUL_UN8 (s, dest_ia, d, src_a);
+
+	*dest++ = s;
+	width--;
+    }
 
     COMPUTE_SHIFT_MASKC (dest, src, mask);
 
@@ -942,6 +1154,19 @@ vmx_combine_xor_u_no_mask (uint32_t *      dest,
     vector unsigned char tmp1, tmp2, tmp3, tmp4, edges,
 	dest_mask, src_mask, store_mask;
 
+    while (width && ((uintptr_t)dest & 15))
+    {
+	uint32_t s = *src++;
+	uint32_t d = *dest;
+	uint32_t src_ia = ALPHA_8 (~s);
+	uint32_t dest_ia = ALPHA_8 (~d);
+
+	UN8x4_MUL_UN8_ADD_UN8x4_MUL_UN8 (s, dest_ia, d, src_ia);
+
+	*dest++ = s;
+	width--;
+    }
+
     COMPUTE_SHIFT_MASKS (dest, src);
 
     /* printf ("%s\n",__PRETTY_FUNCTION__); */
@@ -981,6 +1206,24 @@ vmx_combine_xor_u_mask (uint32_t *      dest,
     vector unsigned int vdest, vsrc, vmask;
     vector unsigned char tmp1, tmp2, tmp3, tmp4, edges,
 	dest_mask, src_mask, mask_mask, store_mask;
+
+    while (width && ((uintptr_t)dest & 15))
+    {
+	uint32_t m = ALPHA_8 (*mask++);
+	uint32_t s = *src++;
+	uint32_t d = *dest;
+	uint32_t src_ia;
+	uint32_t dest_ia = ALPHA_8 (~d);
+
+	UN8x4_MUL_UN8 (s, m);
+
+	src_ia = ALPHA_8 (~s);
+
+	UN8x4_MUL_UN8_ADD_UN8x4_MUL_UN8 (s, dest_ia, d, src_ia);
+
+	*dest++ = s;
+	width--;
+    }
 
     COMPUTE_SHIFT_MASKC (dest, src, mask);
 
@@ -1041,6 +1284,17 @@ vmx_combine_add_u_no_mask (uint32_t *      dest,
     vector unsigned char tmp1, tmp2, tmp3, tmp4, edges,
 	dest_mask, src_mask, store_mask;
 
+    while (width && ((uintptr_t)dest & 15))
+    {
+	uint32_t s = *src++;
+	uint32_t d = *dest;
+
+	UN8x4_ADD_UN8x4 (d, s);
+
+	*dest++ = d;
+	width--;
+    }
+
     COMPUTE_SHIFT_MASKS (dest, src);
     /* printf ("%s\n",__PRETTY_FUNCTION__); */
     for (i = width / 4; i > 0; i--)
@@ -1076,6 +1330,19 @@ vmx_combine_add_u_mask (uint32_t *      dest,
     vector unsigned int vdest, vsrc, vmask;
     vector unsigned char tmp1, tmp2, tmp3, tmp4, edges,
 	dest_mask, src_mask, mask_mask, store_mask;
+
+    while (width && ((uintptr_t)dest & 15))
+    {
+	uint32_t m = ALPHA_8 (*mask++);
+	uint32_t s = *src++;
+	uint32_t d = *dest;
+
+	UN8x4_MUL_UN8 (s, m);
+	UN8x4_ADD_UN8x4 (d, s);
+
+	*dest++ = d;
+	width--;
+    }
 
     COMPUTE_SHIFT_MASKC (dest, src, mask);
 
@@ -1133,6 +1400,17 @@ vmx_combine_src_ca (pixman_implementation_t *imp,
     vector unsigned char tmp1, tmp2, tmp3, tmp4, edges,
 	dest_mask, mask_mask, src_mask, store_mask;
 
+    while (width && ((uintptr_t)dest & 15))
+    {
+	uint32_t a = *mask++;
+	uint32_t s = *src++;
+
+	UN8x4_MUL_UN8x4 (s, a);
+
+	*dest++ = s;
+	width--;
+    }
+
     COMPUTE_SHIFT_MASKC (dest, src, mask);
 
     /* printf ("%s\n",__PRETTY_FUNCTION__); */
@@ -1172,6 +1450,21 @@ vmx_combine_over_ca (pixman_implementation_t *imp,
     vector unsigned int vdest, vsrc, vmask;
     vector unsigned char tmp1, tmp2, tmp3, tmp4, edges,
 	dest_mask, mask_mask, src_mask, store_mask;
+
+    while (width && ((uintptr_t)dest & 15))
+    {
+	uint32_t a = *mask++;
+	uint32_t s = *src++;
+	uint32_t d = *dest;
+	uint32_t sa = ALPHA_8 (s);
+
+	UN8x4_MUL_UN8x4 (s, a);
+	UN8x4_MUL_UN8 (a, sa);
+	UN8x4_MUL_UN8x4_ADD_UN8x4 (d, ~a, s);
+
+	*dest++ = d;
+	width--;
+    }
 
     COMPUTE_SHIFT_MASKC (dest, src, mask);
 
@@ -1217,6 +1510,20 @@ vmx_combine_over_reverse_ca (pixman_implementation_t *imp,
     vector unsigned char tmp1, tmp2, tmp3, tmp4, edges,
 	dest_mask, mask_mask, src_mask, store_mask;
 
+    while (width && ((uintptr_t)dest & 15))
+    {
+	uint32_t a = *mask++;
+	uint32_t s = *src++;
+	uint32_t d = *dest;
+	uint32_t ida = ALPHA_8 (~d);
+
+	UN8x4_MUL_UN8x4 (s, a);
+	UN8x4_MUL_UN8_ADD_UN8x4 (s, ida, d);
+
+	*dest++ = s;
+	width--;
+    }
+
     COMPUTE_SHIFT_MASKC (dest, src, mask);
 
     /* printf("%s\n",__PRETTY_FUNCTION__); */
@@ -1260,6 +1567,19 @@ vmx_combine_in_ca (pixman_implementation_t *imp,
     vector unsigned char tmp1, tmp2, tmp3, tmp4, edges,
 	dest_mask, mask_mask, src_mask, store_mask;
 
+    while (width && ((uintptr_t)dest & 15))
+    {
+	uint32_t a = *mask++;
+	uint32_t s = *src++;
+	uint32_t da = ALPHA_8 (*dest);
+
+	UN8x4_MUL_UN8x4 (s, a);
+	UN8x4_MUL_UN8 (s, da);
+
+	*dest++ = s;
+	width--;
+    }
+
     COMPUTE_SHIFT_MASKC (dest, src, mask);
 
     /* printf ("%s\n",__PRETTY_FUNCTION__); */
@@ -1301,6 +1621,19 @@ vmx_combine_in_reverse_ca (pixman_implementation_t *imp,
     vector unsigned int vdest, vsrc, vmask;
     vector unsigned char tmp1, tmp2, tmp3, tmp4, edges,
 	dest_mask, mask_mask, src_mask, store_mask;
+
+    while (width && ((uintptr_t)dest & 15))
+    {
+	uint32_t a = *mask++;
+	uint32_t d = *dest;
+	uint32_t sa = ALPHA_8 (*src++);
+
+	UN8x4_MUL_UN8 (a, sa);
+	UN8x4_MUL_UN8x4 (d, a);
+
+	*dest++ = d;
+	width--;
+    }
 
     COMPUTE_SHIFT_MASKC (dest, src, mask);
 
@@ -1344,6 +1677,20 @@ vmx_combine_out_ca (pixman_implementation_t *imp,
     vector unsigned int vdest, vsrc, vmask;
     vector unsigned char tmp1, tmp2, tmp3, tmp4, edges,
 	dest_mask, mask_mask, src_mask, store_mask;
+
+    while (width && ((uintptr_t)dest & 15))
+    {
+	uint32_t a = *mask++;
+	uint32_t s = *src++;
+	uint32_t d = *dest;
+	uint32_t da = ALPHA_8 (~d);
+
+	UN8x4_MUL_UN8x4 (s, a);
+	UN8x4_MUL_UN8 (s, da);
+
+	*dest++ = s;
+	width--;
+    }
 
     COMPUTE_SHIFT_MASKC (dest, src, mask);
 
@@ -1389,6 +1736,20 @@ vmx_combine_out_reverse_ca (pixman_implementation_t *imp,
     vector unsigned char tmp1, tmp2, tmp3, tmp4, edges,
 	dest_mask, mask_mask, src_mask, store_mask;
 
+    while (width && ((uintptr_t)dest & 15))
+    {
+	uint32_t a = *mask++;
+	uint32_t s = *src++;
+	uint32_t d = *dest;
+	uint32_t sa = ALPHA_8 (s);
+
+	UN8x4_MUL_UN8 (a, sa);
+	UN8x4_MUL_UN8x4 (d, ~a);
+
+	*dest++ = d;
+	width--;
+    }
+
     COMPUTE_SHIFT_MASKC (dest, src, mask);
 
     /* printf ("%s\n",__PRETTY_FUNCTION__); */
@@ -1432,6 +1793,22 @@ vmx_combine_atop_ca (pixman_implementation_t *imp,
     vector unsigned int vdest, vsrc, vmask, vsrca;
     vector unsigned char tmp1, tmp2, tmp3, tmp4, edges,
 	dest_mask, mask_mask, src_mask, store_mask;
+
+    while (width && ((uintptr_t)dest & 15))
+    {
+	uint32_t a = *mask++;
+	uint32_t s = *src++;
+	uint32_t d = *dest;
+	uint32_t sa = ALPHA_8 (s);
+	uint32_t da = ALPHA_8 (d);
+
+	UN8x4_MUL_UN8x4 (s, a);
+	UN8x4_MUL_UN8 (a, sa);
+	UN8x4_MUL_UN8x4_ADD_UN8x4_MUL_UN8 (d, ~a, s, da);
+
+	*dest++ = d;
+	width--;
+    }
 
     COMPUTE_SHIFT_MASKC (dest, src, mask);
 
@@ -1484,6 +1861,22 @@ vmx_combine_atop_reverse_ca (pixman_implementation_t *imp,
     vector unsigned char tmp1, tmp2, tmp3, tmp4, edges,
 	dest_mask, mask_mask, src_mask, store_mask;
 
+    while (width && ((uintptr_t)dest & 15))
+    {
+	uint32_t a = *mask++;
+	uint32_t s = *src++;
+	uint32_t d = *dest;
+	uint32_t sa = ALPHA_8 (s);
+	uint32_t da = ALPHA_8 (~d);
+
+	UN8x4_MUL_UN8x4 (s, a);
+	UN8x4_MUL_UN8 (a, sa);
+	UN8x4_MUL_UN8x4_ADD_UN8x4_MUL_UN8 (d, a, s, da);
+
+	*dest++ = d;
+	width--;
+    }
+
     COMPUTE_SHIFT_MASKC (dest, src, mask);
 
     /* printf ("%s\n",__PRETTY_FUNCTION__); */
@@ -1532,6 +1925,22 @@ vmx_combine_xor_ca (pixman_implementation_t *imp,
     vector unsigned char tmp1, tmp2, tmp3, tmp4, edges,
 	dest_mask, mask_mask, src_mask, store_mask;
 
+    while (width && ((uintptr_t)dest & 15))
+    {
+	uint32_t a = *mask++;
+	uint32_t s = *src++;
+	uint32_t d = *dest;
+	uint32_t sa = ALPHA_8 (s);
+	uint32_t da = ALPHA_8 (~d);
+
+	UN8x4_MUL_UN8x4 (s, a);
+	UN8x4_MUL_UN8 (a, sa);
+	UN8x4_MUL_UN8x4_ADD_UN8x4_MUL_UN8 (d, ~a, s, da);
+
+	*dest++ = d;
+	width--;
+    }
+
     COMPUTE_SHIFT_MASKC (dest, src, mask);
 
     /* printf ("%s\n",__PRETTY_FUNCTION__); */
@@ -1579,6 +1988,19 @@ vmx_combine_add_ca (pixman_implementation_t *imp,
     vector unsigned int vdest, vsrc, vmask;
     vector unsigned char tmp1, tmp2, tmp3, tmp4, edges,
 	dest_mask, mask_mask, src_mask, store_mask;
+
+    while (width && ((uintptr_t)dest & 15))
+    {
+	uint32_t a = *mask++;
+	uint32_t s = *src++;
+	uint32_t d = *dest;
+
+	UN8x4_MUL_UN8x4 (s, a);
+	UN8x4_ADD_UN8x4 (s, d);
+
+	*dest++ = s;
+	width--;
+    }
 
     COMPUTE_SHIFT_MASKC (dest, src, mask);
 
