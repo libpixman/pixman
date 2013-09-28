@@ -134,15 +134,11 @@ over (vector unsigned int src,
     source ## _mask = vec_lvsl (0, source);
 
 #define COMPUTE_SHIFT_MASKS(dest, source)				\
-    dest ## _mask = vec_lvsl (0, dest);					\
-    source ## _mask = vec_lvsl (0, source);				\
-    store_mask = vec_lvsr (0, dest);
+    source ## _mask = vec_lvsl (0, source);
 
 #define COMPUTE_SHIFT_MASKC(dest, source, mask)				\
     mask ## _mask = vec_lvsl (0, mask);					\
-    dest ## _mask = vec_lvsl (0, dest);					\
-    source ## _mask = vec_lvsl (0, source);				\
-    store_mask = vec_lvsr (0, dest);
+    source ## _mask = vec_lvsl (0, source);
 
 /* notice you have to declare temp vars...
  * Note: tmp3 and tmp4 must remain untouched!
@@ -151,23 +147,17 @@ over (vector unsigned int src,
 #define LOAD_VECTORS(dest, source)			  \
     tmp1 = (typeof(tmp1))vec_ld (0, source);		  \
     tmp2 = (typeof(tmp2))vec_ld (15, source);		  \
-    tmp3 = (typeof(tmp3))vec_ld (0, dest);		  \
     v ## source = (typeof(v ## source))			  \
 	vec_perm (tmp1, tmp2, source ## _mask);		  \
-    tmp4 = (typeof(tmp4))vec_ld (15, dest);		  \
-    v ## dest = (typeof(v ## dest))			  \
-	vec_perm (tmp3, tmp4, dest ## _mask);
+    v ## dest = (typeof(v ## dest))vec_ld (0, dest);
 
 #define LOAD_VECTORSC(dest, source, mask)		  \
     tmp1 = (typeof(tmp1))vec_ld (0, source);		  \
     tmp2 = (typeof(tmp2))vec_ld (15, source);		  \
-    tmp3 = (typeof(tmp3))vec_ld (0, dest);		  \
     v ## source = (typeof(v ## source))			  \
 	vec_perm (tmp1, tmp2, source ## _mask);		  \
-    tmp4 = (typeof(tmp4))vec_ld (15, dest);		  \
     tmp1 = (typeof(tmp1))vec_ld (0, mask);		  \
-    v ## dest = (typeof(v ## dest))			  \
-	vec_perm (tmp3, tmp4, dest ## _mask);		  \
+    v ## dest = (typeof(v ## dest))vec_ld (0, dest);	  \
     tmp2 = (typeof(tmp2))vec_ld (15, mask);		  \
     v ## mask = (typeof(v ## mask))			  \
 	vec_perm (tmp1, tmp2, mask ## _mask);
@@ -178,11 +168,7 @@ over (vector unsigned int src,
                                 splat_alpha (v ## mask));
 
 #define STORE_VECTOR(dest)						\
-    edges = vec_perm (tmp4, tmp3, dest ## _mask);			\
-    tmp3 = vec_perm ((vector unsigned char)v ## dest, edges, store_mask); \
-    tmp1 = vec_perm (edges, (vector unsigned char)v ## dest, store_mask); \
-    vec_st ((vector unsigned int) tmp3, 15, dest);			\
-    vec_st ((vector unsigned int) tmp1, 0, dest);
+    vec_st ((vector unsigned int) v ## dest, 0, dest);
 
 static void
 vmx_combine_over_u_no_mask (uint32_t *      dest,
@@ -191,8 +177,7 @@ vmx_combine_over_u_no_mask (uint32_t *      dest,
 {
     int i;
     vector unsigned int vdest, vsrc;
-    vector unsigned char tmp1, tmp2, tmp3, tmp4, edges,
-	dest_mask, src_mask, store_mask;
+    vector unsigned char tmp1, tmp2, src_mask;
 
     while (width && ((uintptr_t)dest & 15))
     {
@@ -242,8 +227,7 @@ vmx_combine_over_u_mask (uint32_t *      dest,
 {
     int i;
     vector unsigned int vdest, vsrc, vmask;
-    vector unsigned char tmp1, tmp2, tmp3, tmp4, edges,
-	dest_mask, src_mask, mask_mask, store_mask;
+    vector unsigned char tmp1, tmp2, src_mask, mask_mask;
 
     while (width && ((uintptr_t)dest & 15))
     {
@@ -314,8 +298,7 @@ vmx_combine_over_reverse_u_no_mask (uint32_t *      dest,
 {
     int i;
     vector unsigned int vdest, vsrc;
-    vector unsigned char tmp1, tmp2, tmp3, tmp4, edges,
-	dest_mask, src_mask, store_mask;
+    vector unsigned char tmp1, tmp2, src_mask;
 
     while (width && ((uintptr_t)dest & 15))
     {
@@ -363,8 +346,7 @@ vmx_combine_over_reverse_u_mask (uint32_t *      dest,
 {
     int i;
     vector unsigned int vdest, vsrc, vmask;
-    vector unsigned char tmp1, tmp2, tmp3, tmp4, edges,
-	dest_mask, src_mask, mask_mask, store_mask;
+    vector unsigned char tmp1, tmp2, src_mask, mask_mask;
 
     while (width && ((uintptr_t)dest & 15))
     {
@@ -432,8 +414,7 @@ vmx_combine_in_u_no_mask (uint32_t *      dest,
 {
     int i;
     vector unsigned int vdest, vsrc;
-    vector unsigned char tmp1, tmp2, tmp3, tmp4, edges,
-	dest_mask, src_mask, store_mask;
+    vector unsigned char tmp1, tmp2, src_mask;
 
     while (width && ((uintptr_t)dest & 15))
     {
@@ -478,8 +459,7 @@ vmx_combine_in_u_mask (uint32_t *      dest,
 {
     int i;
     vector unsigned int vdest, vsrc, vmask;
-    vector unsigned char tmp1, tmp2, tmp3, tmp4, edges,
-	dest_mask, src_mask, mask_mask, store_mask;
+    vector unsigned char tmp1, tmp2, src_mask, mask_mask;
 
     while (width && ((uintptr_t)dest & 15))
     {
@@ -544,8 +524,7 @@ vmx_combine_in_reverse_u_no_mask (uint32_t *      dest,
 {
     int i;
     vector unsigned int vdest, vsrc;
-    vector unsigned char tmp1, tmp2, tmp3, tmp4, edges,
-	dest_mask, src_mask, store_mask;
+    vector unsigned char tmp1, tmp2, src_mask;
 
     while (width && ((uintptr_t)dest & 15))
     {
@@ -592,8 +571,7 @@ vmx_combine_in_reverse_u_mask (uint32_t *      dest,
 {
     int i;
     vector unsigned int vdest, vsrc, vmask;
-    vector unsigned char tmp1, tmp2, tmp3, tmp4, edges,
-	dest_mask, src_mask, mask_mask, store_mask;
+    vector unsigned char tmp1, tmp2, src_mask, mask_mask;
 
     while (width && ((uintptr_t)dest & 15))
     {
@@ -660,8 +638,7 @@ vmx_combine_out_u_no_mask (uint32_t *      dest,
 {
     int i;
     vector unsigned int vdest, vsrc;
-    vector unsigned char tmp1, tmp2, tmp3, tmp4, edges,
-	dest_mask, src_mask, store_mask;
+    vector unsigned char tmp1, tmp2, src_mask;
 
     while (width && ((uintptr_t)dest & 15))
     {
@@ -708,8 +685,7 @@ vmx_combine_out_u_mask (uint32_t *      dest,
 {
     int i;
     vector unsigned int vdest, vsrc, vmask;
-    vector unsigned char tmp1, tmp2, tmp3, tmp4, edges,
-	dest_mask, src_mask, mask_mask, store_mask;
+    vector unsigned char tmp1, tmp2, src_mask, mask_mask;
 
     while (width && ((uintptr_t)dest & 15))
     {
@@ -774,8 +750,7 @@ vmx_combine_out_reverse_u_no_mask (uint32_t *      dest,
 {
     int i;
     vector unsigned int vdest, vsrc;
-    vector unsigned char tmp1, tmp2, tmp3, tmp4, edges,
-	dest_mask, src_mask, store_mask;
+    vector unsigned char tmp1, tmp2, src_mask;
 
     while (width && ((uintptr_t)dest & 15))
     {
@@ -823,8 +798,7 @@ vmx_combine_out_reverse_u_mask (uint32_t *      dest,
 {
     int i;
     vector unsigned int vdest, vsrc, vmask;
-    vector unsigned char tmp1, tmp2, tmp3, tmp4, edges,
-	dest_mask, src_mask, mask_mask, store_mask;
+    vector unsigned char tmp1, tmp2, src_mask, mask_mask;
 
     while (width && ((uintptr_t)dest & 15))
     {
@@ -891,8 +865,7 @@ vmx_combine_atop_u_no_mask (uint32_t *      dest,
 {
     int i;
     vector unsigned int vdest, vsrc;
-    vector unsigned char tmp1, tmp2, tmp3, tmp4, edges,
-	dest_mask, src_mask, store_mask;
+    vector unsigned char tmp1, tmp2, src_mask;
 
     while (width && ((uintptr_t)dest & 15))
     {
@@ -944,8 +917,7 @@ vmx_combine_atop_u_mask (uint32_t *      dest,
 {
     int i;
     vector unsigned int vdest, vsrc, vmask;
-    vector unsigned char tmp1, tmp2, tmp3, tmp4, edges,
-	dest_mask, src_mask, mask_mask, store_mask;
+    vector unsigned char tmp1, tmp2, src_mask, mask_mask;
 
     while (width && ((uintptr_t)dest & 15))
     {
@@ -1021,8 +993,7 @@ vmx_combine_atop_reverse_u_no_mask (uint32_t *      dest,
 {
     int i;
     vector unsigned int vdest, vsrc;
-    vector unsigned char tmp1, tmp2, tmp3, tmp4, edges,
-	dest_mask, src_mask, store_mask;
+    vector unsigned char tmp1, tmp2, src_mask;
 
     while (width && ((uintptr_t)dest & 15))
     {
@@ -1074,8 +1045,7 @@ vmx_combine_atop_reverse_u_mask (uint32_t *      dest,
 {
     int i;
     vector unsigned int vdest, vsrc, vmask;
-    vector unsigned char tmp1, tmp2, tmp3, tmp4, edges,
-	dest_mask, src_mask, mask_mask, store_mask;
+    vector unsigned char tmp1, tmp2, src_mask, mask_mask;
 
     while (width && ((uintptr_t)dest & 15))
     {
@@ -1151,8 +1121,7 @@ vmx_combine_xor_u_no_mask (uint32_t *      dest,
 {
     int i;
     vector unsigned int vdest, vsrc;
-    vector unsigned char tmp1, tmp2, tmp3, tmp4, edges,
-	dest_mask, src_mask, store_mask;
+    vector unsigned char tmp1, tmp2, src_mask;
 
     while (width && ((uintptr_t)dest & 15))
     {
@@ -1204,8 +1173,7 @@ vmx_combine_xor_u_mask (uint32_t *      dest,
 {
     int i;
     vector unsigned int vdest, vsrc, vmask;
-    vector unsigned char tmp1, tmp2, tmp3, tmp4, edges,
-	dest_mask, src_mask, mask_mask, store_mask;
+    vector unsigned char tmp1, tmp2, src_mask, mask_mask;
 
     while (width && ((uintptr_t)dest & 15))
     {
@@ -1281,8 +1249,7 @@ vmx_combine_add_u_no_mask (uint32_t *      dest,
 {
     int i;
     vector unsigned int vdest, vsrc;
-    vector unsigned char tmp1, tmp2, tmp3, tmp4, edges,
-	dest_mask, src_mask, store_mask;
+    vector unsigned char tmp1, tmp2, src_mask;
 
     while (width && ((uintptr_t)dest & 15))
     {
@@ -1328,8 +1295,7 @@ vmx_combine_add_u_mask (uint32_t *      dest,
 {
     int i;
     vector unsigned int vdest, vsrc, vmask;
-    vector unsigned char tmp1, tmp2, tmp3, tmp4, edges,
-	dest_mask, src_mask, mask_mask, store_mask;
+    vector unsigned char tmp1, tmp2, src_mask, mask_mask;
 
     while (width && ((uintptr_t)dest & 15))
     {
@@ -1397,8 +1363,7 @@ vmx_combine_src_ca (pixman_implementation_t *imp,
 {
     int i;
     vector unsigned int vdest, vsrc, vmask;
-    vector unsigned char tmp1, tmp2, tmp3, tmp4, edges,
-	dest_mask, mask_mask, src_mask, store_mask;
+    vector unsigned char tmp1, tmp2, mask_mask, src_mask;
 
     while (width && ((uintptr_t)dest & 15))
     {
@@ -1448,8 +1413,7 @@ vmx_combine_over_ca (pixman_implementation_t *imp,
 {
     int i;
     vector unsigned int vdest, vsrc, vmask;
-    vector unsigned char tmp1, tmp2, tmp3, tmp4, edges,
-	dest_mask, mask_mask, src_mask, store_mask;
+    vector unsigned char tmp1, tmp2, mask_mask, src_mask;
 
     while (width && ((uintptr_t)dest & 15))
     {
@@ -1507,8 +1471,7 @@ vmx_combine_over_reverse_ca (pixman_implementation_t *imp,
 {
     int i;
     vector unsigned int vdest, vsrc, vmask;
-    vector unsigned char tmp1, tmp2, tmp3, tmp4, edges,
-	dest_mask, mask_mask, src_mask, store_mask;
+    vector unsigned char tmp1, tmp2, mask_mask, src_mask;
 
     while (width && ((uintptr_t)dest & 15))
     {
@@ -1564,8 +1527,7 @@ vmx_combine_in_ca (pixman_implementation_t *imp,
 {
     int i;
     vector unsigned int vdest, vsrc, vmask;
-    vector unsigned char tmp1, tmp2, tmp3, tmp4, edges,
-	dest_mask, mask_mask, src_mask, store_mask;
+    vector unsigned char tmp1, tmp2, mask_mask, src_mask;
 
     while (width && ((uintptr_t)dest & 15))
     {
@@ -1619,8 +1581,7 @@ vmx_combine_in_reverse_ca (pixman_implementation_t *imp,
 {
     int i;
     vector unsigned int vdest, vsrc, vmask;
-    vector unsigned char tmp1, tmp2, tmp3, tmp4, edges,
-	dest_mask, mask_mask, src_mask, store_mask;
+    vector unsigned char tmp1, tmp2, mask_mask, src_mask;
 
     while (width && ((uintptr_t)dest & 15))
     {
@@ -1675,8 +1636,7 @@ vmx_combine_out_ca (pixman_implementation_t *imp,
 {
     int i;
     vector unsigned int vdest, vsrc, vmask;
-    vector unsigned char tmp1, tmp2, tmp3, tmp4, edges,
-	dest_mask, mask_mask, src_mask, store_mask;
+    vector unsigned char tmp1, tmp2, mask_mask, src_mask;
 
     while (width && ((uintptr_t)dest & 15))
     {
@@ -1733,8 +1693,7 @@ vmx_combine_out_reverse_ca (pixman_implementation_t *imp,
 {
     int i;
     vector unsigned int vdest, vsrc, vmask;
-    vector unsigned char tmp1, tmp2, tmp3, tmp4, edges,
-	dest_mask, mask_mask, src_mask, store_mask;
+    vector unsigned char tmp1, tmp2, mask_mask, src_mask;
 
     while (width && ((uintptr_t)dest & 15))
     {
@@ -1791,8 +1750,7 @@ vmx_combine_atop_ca (pixman_implementation_t *imp,
 {
     int i;
     vector unsigned int vdest, vsrc, vmask, vsrca;
-    vector unsigned char tmp1, tmp2, tmp3, tmp4, edges,
-	dest_mask, mask_mask, src_mask, store_mask;
+    vector unsigned char tmp1, tmp2, mask_mask, src_mask;
 
     while (width && ((uintptr_t)dest & 15))
     {
@@ -1858,8 +1816,7 @@ vmx_combine_atop_reverse_ca (pixman_implementation_t *imp,
 {
     int i;
     vector unsigned int vdest, vsrc, vmask;
-    vector unsigned char tmp1, tmp2, tmp3, tmp4, edges,
-	dest_mask, mask_mask, src_mask, store_mask;
+    vector unsigned char tmp1, tmp2, mask_mask, src_mask;
 
     while (width && ((uintptr_t)dest & 15))
     {
@@ -1922,8 +1879,7 @@ vmx_combine_xor_ca (pixman_implementation_t *imp,
 {
     int i;
     vector unsigned int vdest, vsrc, vmask;
-    vector unsigned char tmp1, tmp2, tmp3, tmp4, edges,
-	dest_mask, mask_mask, src_mask, store_mask;
+    vector unsigned char tmp1, tmp2, mask_mask, src_mask;
 
     while (width && ((uintptr_t)dest & 15))
     {
@@ -1986,8 +1942,7 @@ vmx_combine_add_ca (pixman_implementation_t *imp,
 {
     int i;
     vector unsigned int vdest, vsrc, vmask;
-    vector unsigned char tmp1, tmp2, tmp3, tmp4, edges,
-	dest_mask, mask_mask, src_mask, store_mask;
+    vector unsigned char tmp1, tmp2, mask_mask, src_mask;
 
     while (width && ((uintptr_t)dest & 15))
     {
