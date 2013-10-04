@@ -643,9 +643,9 @@ combine_multiply_ca (pixman_implementation_t *imp,
  *    = ad * s + as * d - s * d
  */
 static inline uint32_t
-blend_screen (uint32_t dca, uint32_t da, uint32_t sca, uint32_t sa)
+blend_screen (uint32_t d, uint32_t ad, uint32_t s, uint32_t as)
 {
-    return DIV_ONE_UN8 (sca * da + dca * sa - sca * dca);
+    return DIV_ONE_UN8 (s * ad + d * as - s * d);
 }
 
 PDF_SEPARABLE_BLEND_MODE (screen)
@@ -673,15 +673,16 @@ PDF_SEPARABLE_BLEND_MODE (screen)
  *         as * ad - 2 * (ad - d) * (as - s)
  */
 static inline uint32_t
-blend_overlay (uint32_t dca, uint32_t da, uint32_t sca, uint32_t sa)
+blend_overlay (uint32_t d, uint32_t ad, uint32_t s, uint32_t as)
 {
-    uint32_t rca;
+    uint32_t r;
 
-    if (2 * dca < da)
-	rca = 2 * sca * dca;
+    if (2 * d < ad)
+	r = 2 * s * d;
     else
-	rca = sa * da - 2 * (da - dca) * (sa - sca);
-    return DIV_ONE_UN8 (rca);
+	r = as * ad - 2 * (ad - d) * (as - s);
+
+    return DIV_ONE_UN8 (r);
 }
 
 PDF_SEPARABLE_BLEND_MODE (overlay)
@@ -694,12 +695,11 @@ PDF_SEPARABLE_BLEND_MODE (overlay)
  *   = MIN (as * d, ad * s)
  */
 static inline uint32_t
-blend_darken (uint32_t dca, uint32_t da, uint32_t sca, uint32_t sa)
+blend_darken (uint32_t d, uint32_t ad, uint32_t s, uint32_t as)
 {
-    uint32_t s, d;
+    s = ad * s;
+    d = as * d;
 
-    s = sca * da;
-    d = dca * sa;
     return DIV_ONE_UN8 (s > d ? d : s);
 }
 
@@ -713,12 +713,11 @@ PDF_SEPARABLE_BLEND_MODE (darken)
  *   = MAX (as * d, ad * s)
  */
 static inline uint32_t
-blend_lighten (uint32_t dca, uint32_t da, uint32_t sca, uint32_t sa)
+blend_lighten (uint32_t d, uint32_t ad, uint32_t s, uint32_t as)
 {
-    uint32_t s, d;
-
-    s = sca * da;
-    d = dca * sa;
+    s = ad * s;
+    d = as * d;
+    
     return DIV_ONE_UN8 (s > d ? s : d);
 }
 
@@ -743,16 +742,16 @@ PDF_SEPARABLE_BLEND_MODE (lighten)
  *
  */
 static inline uint32_t
-blend_color_dodge (uint32_t dca, uint32_t da, uint32_t sca, uint32_t sa)
+blend_color_dodge (uint32_t d, uint32_t ad, uint32_t s, uint32_t as)
 {
-    if (sca >= sa)
+    if (s >= as)
     {
-	return dca == 0 ? 0 : DIV_ONE_UN8 (sa * da);
+	return d == 0 ? 0 : DIV_ONE_UN8 (as * ad);
     }
     else
     {
-	uint32_t rca = dca * sa / (sa - sca);
-	return DIV_ONE_UN8 (sa * MIN (rca, da));
+	uint32_t r = d * as / (as - s);
+	return DIV_ONE_UN8 (as * MIN (r, ad));
     }
 }
 
@@ -779,16 +778,16 @@ PDF_SEPARABLE_BLEND_MODE (color_dodge)
  *         ad * as  - as * as * (ad - d) / s
  */
 static inline uint32_t
-blend_color_burn (uint32_t dca, uint32_t da, uint32_t sca, uint32_t sa)
+blend_color_burn (uint32_t d, uint32_t ad, uint32_t s, uint32_t as)
 {
-    if (sca == 0)
+    if (s == 0)
     {
-	return dca < da ? 0 : DIV_ONE_UN8 (sa * da);
+	return d < ad ? 0 : DIV_ONE_UN8 (as * ad);
     }
     else
     {
-	uint32_t rca = (da - dca) * sa / sca;
-	return DIV_ONE_UN8 (sa * (MAX (rca, da) - rca));
+	uint32_t r = (ad - d) * as / s;
+	return DIV_ONE_UN8 (as * (MAX (r, ad) - r));
     }
 }
 
@@ -812,12 +811,12 @@ PDF_SEPARABLE_BLEND_MODE (color_burn)
  *         as * ad - 2 * (ad - d) * (as - s)
  */
 static inline uint32_t
-blend_hard_light (uint32_t dca, uint32_t da, uint32_t sca, uint32_t sa)
+blend_hard_light (uint32_t d, uint32_t ad, uint32_t s, uint32_t as)
 {
-    if (2 * sca < sa)
-	return DIV_ONE_UN8 (2 * sca * dca);
+    if (2 * s < as)
+	return DIV_ONE_UN8 (2 * s * d);
     else
-	return DIV_ONE_UN8 (sa * da - 2 * (da - dca) * (sa - sca));
+	return DIV_ONE_UN8 (as * ad - 2 * (ad - d) * (as - s));
 }
 
 PDF_SEPARABLE_BLEND_MODE (hard_light)
@@ -840,38 +839,38 @@ PDF_SEPARABLE_BLEND_MODE (hard_light)
  *         d * as + (sqrt (d * ad) - d) * (2 * s - as);
  */
 static inline uint32_t
-blend_soft_light (uint32_t dca_org,
-		  uint32_t da_org,
-		  uint32_t sca_org,
-		  uint32_t sa_org)
+blend_soft_light (uint32_t d_org,
+		  uint32_t ad_org,
+		  uint32_t s_org,
+		  uint32_t as_org)
 {
-    double dca = dca_org * (1.0 / MASK);
-    double da = da_org * (1.0 / MASK);
-    double sca = sca_org * (1.0 / MASK);
-    double sa = sa_org * (1.0 / MASK);
-    double rca;
+    double d = d_org * (1.0 / MASK);
+    double ad = ad_org * (1.0 / MASK);
+    double s = s_org * (1.0 / MASK);
+    double as = as_org * (1.0 / MASK);
+    double r;
 
-    if (2 * sca < sa)
+    if (2 * s < as)
     {
-	if (da == 0)
-	    rca = dca * sa;
+	if (ad == 0)
+	    r = d * as;
 	else
-	    rca = dca * sa - dca * (da - dca) * (sa - 2 * sca) / da;
+	    r = d * as - d * (ad - d) * (as - 2 * s) / ad;
     }
-    else if (da == 0)
+    else if (ad == 0)
     {
-	rca = 0;
+	r = 0;
     }
-    else if (4 * dca <= da)
+    else if (4 * d <= ad)
     {
-	rca = dca * sa +
-	    (2 * sca - sa) * dca * ((16 * dca / da - 12) * dca / da + 3);
+	r = d * as +
+	    (2 * s - as) * d * ((16 * d / ad - 12) * d / ad + 3);
     }
     else
     {
-	rca = dca * sa + (sqrt (dca * da) - dca) * (2 * sca - sa);
+	r = d * as + (sqrt (d * ad) - d) * (2 * s - as);
     }
-    return rca * MASK + 0.5;
+    return r * MASK + 0.5;
 }
 
 PDF_SEPARABLE_BLEND_MODE (soft_light)
@@ -891,15 +890,15 @@ PDF_SEPARABLE_BLEND_MODE (soft_light)
  *        ad * s - as * d
  */
 static inline uint32_t
-blend_difference (uint32_t dca, uint32_t da, uint32_t sca, uint32_t sa)
+blend_difference (uint32_t d, uint32_t ad, uint32_t s, uint32_t as)
 {
-    uint32_t dcasa = dca * sa;
-    uint32_t scada = sca * da;
+    uint32_t das = d * as;
+    uint32_t sad = s * ad;
 
-    if (scada < dcasa)
-	return DIV_ONE_UN8 (dcasa - scada);
+    if (sad < das)
+	return DIV_ONE_UN8 (das - sad);
     else
-	return DIV_ONE_UN8 (scada - dcasa);
+	return DIV_ONE_UN8 (sad - das);
 }
 
 PDF_SEPARABLE_BLEND_MODE (difference)
@@ -916,9 +915,9 @@ PDF_SEPARABLE_BLEND_MODE (difference)
  * PDF_SEPARABLE_BLEND_MODE, but that's a performance optimization */
 
 static inline uint32_t
-blend_exclusion (uint32_t dca, uint32_t da, uint32_t sca, uint32_t sa)
+blend_exclusion (uint32_t d, uint32_t ad, uint32_t s, uint32_t as)
 {
-    return DIV_ONE_UN8 (sca * da + dca * sa - 2 * dca * sca);
+    return DIV_ONE_UN8 (s * ad + d * as - 2 * d * s);
 }
 
 PDF_SEPARABLE_BLEND_MODE (exclusion)
@@ -1178,17 +1177,17 @@ set_sat (uint32_t dest[3], uint32_t src[3], uint32_t sat)
  *
  */
 static inline void
-blend_hsl_hue (uint32_t c[3],
-               uint32_t dc[3],
-               uint32_t da,
-               uint32_t sc[3],
-               uint32_t sa)
+blend_hsl_hue (uint32_t r[3],
+               uint32_t d[3],
+               uint32_t ad,
+               uint32_t s[3],
+               uint32_t as)
 {
-    c[0] = sc[0] * da;
-    c[1] = sc[1] * da;
-    c[2] = sc[2] * da;
-    set_sat (c, c, SAT (dc) * sa);
-    set_lum (c, c, sa * da, LUM (dc) * sa);
+    r[0] = s[0] * ad;
+    r[1] = s[1] * ad;
+    r[2] = s[2] * ad;
+    set_sat (r, r, SAT (d) * as);
+    set_lum (r, r, as * ad, LUM (d) * as);
 }
 
 PDF_NON_SEPARABLE_BLEND_MODE (hsl_hue)
@@ -1203,17 +1202,17 @@ PDF_NON_SEPARABLE_BLEND_MODE (hsl_hue)
  *   = set_lum (set_sat (as * d, ad * SAT (s), as * LUM (d), as * ad))
  */
 static inline void
-blend_hsl_saturation (uint32_t c[3],
-                      uint32_t dc[3],
-                      uint32_t da,
-                      uint32_t sc[3],
-                      uint32_t sa)
+blend_hsl_saturation (uint32_t r[3],
+                      uint32_t d[3],
+                      uint32_t ad,
+                      uint32_t s[3],
+                      uint32_t as)
 {
-    c[0] = dc[0] * sa;
-    c[1] = dc[1] * sa;
-    c[2] = dc[2] * sa;
-    set_sat (c, c, SAT (sc) * da);
-    set_lum (c, c, sa * da, LUM (dc) * sa);
+    r[0] = d[0] * as;
+    r[1] = d[1] * as;
+    r[2] = d[2] * as;
+    set_sat (r, r, SAT (s) * ad);
+    set_lum (r, r, as * ad, LUM (d) * as);
 }
 
 PDF_NON_SEPARABLE_BLEND_MODE (hsl_saturation)
@@ -1226,16 +1225,16 @@ PDF_NON_SEPARABLE_BLEND_MODE (hsl_saturation)
  *   = set_lum (s * ad, as * LUM (d), as * ad)
  */
 static inline void
-blend_hsl_color (uint32_t c[3],
-                 uint32_t dc[3],
-                 uint32_t da,
-                 uint32_t sc[3],
-                 uint32_t sa)
+blend_hsl_color (uint32_t r[3],
+                 uint32_t d[3],
+                 uint32_t ad,
+                 uint32_t s[3],
+                 uint32_t as)
 {
-    c[0] = sc[0] * da;
-    c[1] = sc[1] * da;
-    c[2] = sc[2] * da;
-    set_lum (c, c, sa * da, LUM (dc) * sa);
+    r[0] = s[0] * ad;
+    r[1] = s[1] * ad;
+    r[2] = s[2] * ad;
+    set_lum (r, r, as * ad, LUM (d) * as);
 }
 
 PDF_NON_SEPARABLE_BLEND_MODE (hsl_color)
@@ -1248,16 +1247,16 @@ PDF_NON_SEPARABLE_BLEND_MODE (hsl_color)
  *   = set_lum (as * d, ad * LUM (s), as * ad)
  */
 static inline void
-blend_hsl_luminosity (uint32_t c[3],
-                      uint32_t dc[3],
-                      uint32_t da,
-                      uint32_t sc[3],
-                      uint32_t sa)
+blend_hsl_luminosity (uint32_t r[3],
+                      uint32_t d[3],
+                      uint32_t ad,
+                      uint32_t s[3],
+                      uint32_t as)
 {
-    c[0] = dc[0] * sa;
-    c[1] = dc[1] * sa;
-    c[2] = dc[2] * sa;
-    set_lum (c, c, sa * da, LUM (sc) * da);
+    r[0] = d[0] * as;
+    r[1] = d[1] * as;
+    r[2] = d[2] * as;
+    set_lum (r, r, as * ad, LUM (s) * ad);
 }
 
 PDF_NON_SEPARABLE_BLEND_MODE (hsl_luminosity)
