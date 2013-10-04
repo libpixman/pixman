@@ -744,15 +744,14 @@ PDF_SEPARABLE_BLEND_MODE (lighten)
 static inline uint32_t
 blend_color_dodge (uint32_t d, uint32_t ad, uint32_t s, uint32_t as)
 {
-    if (s >= as)
-    {
-	return d == 0 ? 0 : DIV_ONE_UN8 (as * ad);
-    }
+    if (d == 0)
+        return 0;
+    else if (as * d >= ad * (as - s))
+	return DIV_ONE_UN8 (as * ad);
+    else if (as - s == 0)
+        return DIV_ONE_UN8 (as * ad);
     else
-    {
-	uint32_t r = d * as / (as - s);
-	return DIV_ONE_UN8 (as * MIN (r, ad));
-    }
+        return DIV_ONE_UN8 (as * ((d * as) / ((as - s))));
 }
 
 PDF_SEPARABLE_BLEND_MODE (color_dodge)
