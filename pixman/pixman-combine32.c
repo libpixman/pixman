@@ -779,15 +779,14 @@ PDF_SEPARABLE_BLEND_MODE (color_dodge)
 static inline uint32_t
 blend_color_burn (uint32_t d, uint32_t ad, uint32_t s, uint32_t as)
 {
-    if (s == 0)
-    {
-	return d < ad ? 0 : DIV_ONE_UN8 (as * ad);
-    }
+    if (d >= ad)
+	return DIV_ONE_UN8 (ad * as);
+    else if (as * ad - as * d >= ad * s)
+	return 0;
+    else if (s == 0)
+	return 0;
     else
-    {
-	uint32_t r = (ad - d) * as / s;
-	return DIV_ONE_UN8 (as * (MAX (r, ad) - r));
-    }
+	return DIV_ONE_UN8 (ad * as - (as * as * (ad - d)) / s);
 }
 
 PDF_SEPARABLE_BLEND_MODE (color_burn)
