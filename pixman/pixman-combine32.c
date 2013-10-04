@@ -463,32 +463,59 @@ combine_saturate_u (pixman_implementation_t *imp,
     }
 }
 
+
 /*
  * PDF blend modes:
+ *
  * The following blend modes have been taken from the PDF ISO 32000
  * specification, which at this point in time is available from
- * http://www.adobe.com/devnet/acrobat/pdfs/PDF32000_2008.pdf
- * The relevant chapters are 11.3.5 and 11.3.6.
+ *
+ *     http://www.adobe.com/devnet/pdf/pdf_reference.html
+ *
+ * The specific documents of interest are the PDF spec itself:
+ *
+ *     http://wwwimages.adobe.com/www.adobe.com/content/dam/Adobe/en/devnet/pdf/pdfs/PDF32000_2008.pdf
+ *
+ * chapters 11.3.5 and 11.3.6 and a later supplement for Adobe Acrobat
+ * 9.1 and Reader 9.1:
+ *
+ *     http://wwwimages.adobe.com/www.adobe.com/content/dam/Adobe/en/devnet/pdf/pdfs/adobe_supplement_iso32000_1.pdf
+ *
+ * that clarifies the specifications for blend modes ColorDodge and
+ * ColorBurn.
+ *
  * The formula for computing the final pixel color given in 11.3.6 is:
- * αr × Cr = (1 – αs) × αb × Cb + (1 – αb) × αs × Cs + αb × αs × B(Cb, Cs)
- * with B() being the blend function.
- * Note that OVER is a special case of this operation, using B(Cb, Cs) = Cs
  *
- * These blend modes should match the SVG filter draft specification, as
- * it has been designed to mirror ISO 32000. Note that at the current point
- * no released draft exists that shows this, as the formulas have not been
- * updated yet after the release of ISO 32000.
+ *     αr × Cr = (1 – αs) × αb × Cb + (1 – αb) × αs × Cs + αb × αs × B(Cb, Cs)
  *
- * The default implementation here uses the PDF_SEPARABLE_BLEND_MODE and
- * PDF_NON_SEPARABLE_BLEND_MODE macros, which take the blend function as an
- * argument. Note that this implementation operates on premultiplied colors,
- * while the PDF specification does not. Therefore the code uses the formula
- * Cra = (1 – as) . Dca + (1 – ad) . Sca + B(Dca, ad, Sca, as)
+ * with B() is the blend function. When B(Cb, Cs) = Cs, this formula
+ * reduces to the regular OVER operator.
+ *
+ * Cs and Cb are not premultiplied, so in our implementation we instead
+ * use:
+ *
+ *     cr = (1 – αs) × cb  +  (1 – αb) × cs  +  αb × αs × B (cb/αb, cs/αs)
+ *
+ * where cr, cs, and cb are premultiplied colors, and where the
+ *
+ *     αb × αs × B(cb/αb, cs/αs)
+ *
+ * part is first arithmetically simplified under the assumption that αb
+ * and αs are not 0, and then updated to produce a meaningful result when
+ * they are.
+ *
+ * For all the blend mode operators, the alpha channel is given by
+ *
+ *     αr = αs + αb + αb × αs
  */
 
 /*
  * Multiply
- * B(Dca, ad, Sca, as) = Dca.Sca
+ *
+ *      ad * as * B(d / ad, s / as)
+ *    = ad * as * d/ad * s/as
+ *    = d * s
+ *
  */
 static void
 combine_multiply_u (pixman_implementation_t *imp,
@@ -610,7 +637,10 @@ combine_multiply_ca (pixman_implementation_t *imp,
 
 /*
  * Screen
- * B(Dca, ad, Sca, as) = Dca.sa + Sca.da - Dca.Sca
+ *
+ *      ad * as * B(d/ad, s/as)
+ *    = ad * as * (d/ad + s/as - s/as * d/ad)
+ *    = ad * s + as * d - s * d
  */
 static inline uint32_t
 blend_screen (uint32_t dca, uint32_t da, uint32_t sca, uint32_t sa)
@@ -622,11 +652,25 @@ PDF_SEPARABLE_BLEND_MODE (screen)
 
 /*
  * Overlay
- * B(Dca, Da, Sca, Sa) =
- *   if 2.Dca < Da
- *     2.Sca.Dca
- *   otherwise
- *     Sa.Da - 2.(Da - Dca).(Sa - Sca)
+ *
+ *     ad * as * B(d/ad, s/as)
+ *   = ad * as * Hardlight (s, d)
+ *   = if (d / ad < 0.5)
+ *         as * ad * Multiply (s/as, 2 * d/ad)
+ *     else
+ *         as * ad * Screen (s/as, 2 * d / ad - 1)
+ *   = if (d < 0.5 * ad)
+ *         as * ad * s/as * 2 * d /ad
+ *     else
+ *         as * ad * (s/as + 2 * d / ad - 1 - s / as * (2 * d / ad - 1))
+ *   = if (2 * d < ad)
+ *         2 * s * d
+ *     else
+ *         ad * s + 2 * as * d - as * ad - ad * s * (2 * d / ad - 1)
+ *   = if (2 * d < ad)
+ *         2 * s * d
+ *     else
+ *         as * ad - 2 * (ad - d) * (as - s)
  */
 static inline uint32_t
 blend_overlay (uint32_t dca, uint32_t da, uint32_t sca, uint32_t sa)
@@ -644,7 +688,10 @@ PDF_SEPARABLE_BLEND_MODE (overlay)
 
 /*
  * Darken
- * B(Dca, Da, Sca, Sa) = min (Sca.Da, Dca.Sa)
+ *
+ *     ad * as * B(d/ad, s/as)
+ *   = ad * as * MIN(d/ad, s/as)
+ *   = MIN (as * d, ad * s)
  */
 static inline uint32_t
 blend_darken (uint32_t dca, uint32_t da, uint32_t sca, uint32_t sa)
@@ -660,7 +707,10 @@ PDF_SEPARABLE_BLEND_MODE (darken)
 
 /*
  * Lighten
- * B(Dca, Da, Sca, Sa) = max (Sca.Da, Dca.Sa)
+ *
+ *     ad * as * B(d/ad, s/as)
+ *   = ad * as * MAX(d/ad, s/as)
+ *   = MAX (as * d, ad * s)
  */
 static inline uint32_t
 blend_lighten (uint32_t dca, uint32_t da, uint32_t sca, uint32_t sa)
@@ -676,13 +726,21 @@ PDF_SEPARABLE_BLEND_MODE (lighten)
 
 /*
  * Color dodge
- * B(Dca, Da, Sca, Sa) =
- *   if Dca == 0
- *     0
- *   if Sca == Sa
- *     Sa.Da
- *   otherwise
- *     Sa.Da. min (1, Dca / Da / (1 - Sca/Sa))
+ *
+ *     ad * as * B(d/ad, s/as)
+ *   = if d/ad = 0
+ *         ad * as * 0
+ *     else if (d/ad >= (1 - s/as)
+ *         ad * as * 1
+ *     else
+ *         ad * as * ((d/ad) / (1 - s/as))
+ *   = if d = 0
+ *         0
+ *     elif as * d >= ad * (as - s)
+ *         ad * as
+ *     else
+ *         as * (as * d / (as - s))
+ *
  */
 static inline uint32_t
 blend_color_dodge (uint32_t dca, uint32_t da, uint32_t sca, uint32_t sa)
@@ -702,13 +760,23 @@ PDF_SEPARABLE_BLEND_MODE (color_dodge)
 
 /*
  * Color burn
- * B(Dca, Da, Sca, Sa) =
- *   if Dca == Da
- *     Sa.Da
- *   if Sca == 0
- *     0
- *   otherwise
- *     Sa.Da.(1 - min (1, (1 - Dca/Da).Sa / Sca))
+ *
+ * We modify the first clause "if d = 1" to "if d >= 1" since with
+ * premultiplied colors d > 1 can actually happen.
+ *
+ *     ad * as * B(d/ad, s/as)
+ *   = if d/ad >= 1
+ *         ad * as * 1
+ *     elif (1 - d/ad) >= s/as
+ *         ad * as * 0
+ *     else
+ *         ad * as * (1 - ((1 - d/ad) / (s/as)))
+ *   = if d >= ad
+ *         ad * as
+ *     elif as * ad - as * d >= ad * s
+ *         0
+ *     else
+ *         ad * as  - as * as * (ad - d) / s
  */
 static inline uint32_t
 blend_color_burn (uint32_t dca, uint32_t da, uint32_t sca, uint32_t sa)
@@ -728,11 +796,20 @@ PDF_SEPARABLE_BLEND_MODE (color_burn)
 
 /*
  * Hard light
- * B(Dca, Da, Sca, Sa) =
- *   if 2.Sca < Sa
- *     2.Sca.Dca
- *   otherwise
- *     Sa.Da - 2.(Da - Dca).(Sa - Sca)
+ *
+ *     ad * as * B(d/ad, s/as)
+ *   = if (s/as <= 0.5)
+ *         ad * as * Multiply (d/ad, 2 * s/as)
+ *     else
+ *         ad * as * Screen (d/ad, 2 * s/as - 1)
+ *   = if 2 * s <= as
+ *         ad * as * d/ad * 2 * s / as
+ *     else
+ *         ad * as * (d/ad + (2 * s/as - 1) + d/ad * (2 * s/as - 1))
+ *   = if 2 * s <= as
+ *         2 * s * d
+ *     else
+ *         as * ad - 2 * (ad - d) * (as - s)
  */
 static inline uint32_t
 blend_hard_light (uint32_t dca, uint32_t da, uint32_t sca, uint32_t sa)
@@ -747,13 +824,20 @@ PDF_SEPARABLE_BLEND_MODE (hard_light)
 
 /*
  * Soft light
- * B(Dca, Da, Sca, Sa) =
- *   if (2.Sca <= Sa)
- *     Dca.(Sa - (1 - Dca/Da).(2.Sca - Sa))
- *   otherwise if Dca.4 <= Da
- *     Dca.(Sa + (2.Sca - Sa).((16.Dca/Da - 12).Dca/Da + 3)
- *   otherwise
- *     (Dca.Sa + (SQRT (Dca/Da).Da - Dca).(2.Sca - Sa))
+ *
+ *     ad * as * B(d/ad, s/as)
+ *   = if (s/as <= 0.5)
+ *         ad * as * (d/ad - (1 - 2 * s/as) * d/ad * (1 - d/ad))
+ *     else if (d/ad <= 0.25)
+ *         ad * as * (d/ad + (2 * s/as - 1) * ((((16 * d/ad - 12) * d/ad + 4) * d/ad) - d/ad))
+ *     else
+ *         ad * as * (d/ad + (2 * s/as - 1) * sqrt (d/ad))
+ *   = if (2 * s <= as)
+ *         d * as - d * (ad - d) * (as - 2 * s) / ad;
+ *     else if (4 * d <= ad)
+ *         (2 * s - as) * d * ((16 * d / ad - 12) * d / ad + 3);
+ *     else
+ *         d * as + (sqrt (d * ad) - d) * (2 * s - as);
  */
 static inline uint32_t
 blend_soft_light (uint32_t dca_org,
@@ -794,7 +878,17 @@ PDF_SEPARABLE_BLEND_MODE (soft_light)
 
 /*
  * Difference
- * B(Dca, Da, Sca, Sa) = abs (Dca.Sa - Sca.Da)
+ *
+ *     ad * as * B(s/as, d/ad)
+ *   = ad * as * abs (s/as - d/ad)
+ *   = if (s/as <= d/ad)
+ *         ad * as * (d/ad - s/as)
+ *     else
+ *         ad * as * (s/as - d/ad)
+ *   = if (ad * s <= as * d)
+ *        as * d - ad * s
+ *     else
+ *        ad * s - as * d
  */
 static inline uint32_t
 blend_difference (uint32_t dca, uint32_t da, uint32_t sca, uint32_t sa)
@@ -812,7 +906,10 @@ PDF_SEPARABLE_BLEND_MODE (difference)
 
 /*
  * Exclusion
- * B(Dca, Da, Sca, Sa) = (Sca.Da + Dca.Sa - 2.Sca.Dca)
+ *
+ *     ad * as * B(s/as, d/ad)
+ *   = ad * as * (d/ad + s/as - 2 * d/ad * s/as)
+ *   = as * d + ad * s - 2 * s * d
  */
 
 /* This can be made faster by writing it directly and not using
@@ -836,103 +933,70 @@ PDF_SEPARABLE_BLEND_MODE (exclusion)
  * LUM (C) = 0.3 × Cred + 0.59 × Cgreen + 0.11 × Cblue
  *
  * clip_color (C):
- *   l = LUM (C)
- *   min = Cmin
- *   max = Cmax
- *   if n < 0.0
- *     C = l + ( ( ( C – l ) × l ) ⁄ ( l – min ) )
- *   if x > 1.0
- *     C = l + ( ( ( C – l ) × ( 1 – l ) ) ⁄ ( max – l ) )
- *   return C
+ *     l = LUM (C)
+ *     min = Cmin
+ *     max = Cmax
+ *     if n < 0.0
+ *         C = l + (((C – l) × l) ⁄ (l – min))
+ *     if x > 1.0
+ *         C = l + (((C – l) × (1 – l) ) ⁄ (max – l))
+ *     return C
  *
  * set_lum (C, l):
- *   d = l – LUM (C)
- *   C += d
- *   return clip_color (C)
+ *     d = l – LUM (C)
+ *     C += d
+ *     return clip_color (C)
  *
  * SAT (C) = CH_MAX (C) - CH_MIN (C)
  *
  * set_sat (C, s):
- *  if Cmax > Cmin
- *    Cmid = ( ( ( Cmid – Cmin ) × s ) ⁄ ( Cmax – Cmin ) )
- *    Cmax = s
- *  else
- *    Cmid = Cmax = 0.0
- *  Cmin = 0.0
- *  return C
+ *     if Cmax > Cmin
+ *         Cmid = ( ( ( Cmid – Cmin ) × s ) ⁄ ( Cmax – Cmin ) )
+ *         Cmax = s
+ *     else
+ *         Cmid = Cmax = 0.0
+ *         Cmin = 0.0
+ *     return C
  */
 
 /* For premultiplied colors, we need to know what happens when C is
  * multiplied by a real number. LUM and SAT are linear:
  *
- *    LUM (r × C) = r × LUM (C)		SAT (r * C) = r * SAT (C)
+ *     LUM (r × C) = r × LUM (C)	SAT (r * C) = r * SAT (C)
  *
  * If we extend clip_color with an extra argument a and change
  *
- *        if x >= 1.0
+ *     if x >= 1.0
  *
  * into
  *
- *        if x >= a
+ *     if x >= a
  *
  * then clip_color is also linear:
  *
- *    r * clip_color (C, a) = clip_color (r_c, ra);
+ *     r * clip_color (C, a) = clip_color (r * C, r * a);
  *
  * for positive r.
  *
  * Similarly, we can extend set_lum with an extra argument that is just passed
  * on to clip_color:
  *
- *   r * set_lum ( C, l, a)
+ *       r * set_lum (C, l, a)
  *
- *   = r × clip_color ( C + l - LUM (C), a)
+ *     = r × clip_color (C + l - LUM (C), a)
  *
- *   = clip_color ( r * C + r × l - r * LUM (C), r * a)
+ *     = clip_color (r * C + r × l - r * LUM (C), r * a)
  *
- *   = set_lum ( r * C, r * l, r * a)
+ *     = set_lum (r * C, r * l, r * a)
  *
  * Finally, set_sat:
  *
- *    r * set_sat (C, s) = set_sat (x * C, r * s)
+ *       r * set_sat (C, s) = set_sat (x * C, r * s)
  *
  * The above holds for all non-zero x, because the x'es in the fraction for
  * C_mid cancel out. Specifically, it holds for x = r:
  *
- *    r * set_sat (C, s) = set_sat (r_c, rs)
- *
- */
-
-/* So, for the non-separable PDF blend modes, we have (using s, d for
- * non-premultiplied colors, and S, D for premultiplied:
- *
- *   Color:
- *
- *     a_s * a_d * B(s, d)
- *   = a_s * a_d * set_lum (S/a_s, LUM (D/a_d), 1)
- *   = set_lum (S * a_d, a_s * LUM (D), a_s * a_d)
- *
- *
- *   Luminosity:
- *
- *     a_s * a_d * B(s, d)
- *   = a_s * a_d * set_lum (D/a_d, LUM(S/a_s), 1)
- *   = set_lum (a_s * D, a_d * LUM(S), a_s * a_d)
- *
- *
- *   Saturation:
- *
- *     a_s * a_d * B(s, d)
- *   = a_s * a_d * set_lum (set_sat (D/a_d, SAT (S/a_s)), LUM (D/a_d), 1)
- *   = set_lum (a_s * a_d * set_sat (D/a_d, SAT (S/a_s)),
- *                                        a_s * LUM (D), a_s * a_d)
- *   = set_lum (set_sat (a_s * D, a_d * SAT (S), a_s * LUM (D), a_s * a_d))
- *
- *   Hue:
- *
- *     a_s * a_d * B(s, d)
- *   = a_s * a_d * set_lum (set_sat (S/a_s, SAT (D/a_d)), LUM (D/a_d), 1)
- *   = set_lum (set_sat (a_d * S, a_s * SAT (D)), a_s * LUM (D), a_s * a_d)
+ *       r * set_sat (C, s) = set_sat (r * C, r * s)
  *
  */
 
@@ -960,7 +1024,7 @@ PDF_SEPARABLE_BLEND_MODE (exclusion)
 	    uint8_t da = ALPHA_8 (d);					\
 	    uint8_t ida = ~da;						\
 	    uint32_t result;						\
-	    uint32_t sc[3], dc[3], c[3];					\
+	    uint32_t sc[3], dc[3], c[3];				\
             								\
 	    result = d;							\
 	    UN8x4_MUL_UN8_ADD_UN8x4_MUL_UN8 (result, isa, s, ida);	\
@@ -1106,9 +1170,12 @@ set_sat (uint32_t dest[3], uint32_t src[3], uint32_t sat)
     }
 }
 
-/*
- * Hue:
- * B(Cb, Cs) = set_lum (set_sat (Cs, SAT (Cb)), LUM (Cb))
+/* Hue:
+ *
+ *       as * ad * B(s/as, d/as)
+ *     = as * ad * set_lum (set_sat (s/as, SAT (d/ad)), LUM (d/ad), 1)
+ *     = set_lum (set_sat (ad * s, as * SAT (d)), as * LUM (d), as * ad)
+ *
  */
 static inline void
 blend_hsl_hue (uint32_t c[3],
@@ -1126,9 +1193,14 @@ blend_hsl_hue (uint32_t c[3],
 
 PDF_NON_SEPARABLE_BLEND_MODE (hsl_hue)
 
-/*
- * Saturation:
- * B(Cb, Cs) = set_lum (set_sat (Cb, SAT (Cs)), LUM (Cb))
+/* 
+ * Saturation
+ *
+ *     as * ad * B(s/as, d/ad)
+ *   = as * ad * set_lum (set_sat (d/ad, SAT (s/as)), LUM (d/ad), 1)
+ *   = set_lum (as * ad * set_sat (d/ad, SAT (s/as)),
+ *                                       as * LUM (d), as * ad)
+ *   = set_lum (set_sat (as * d, ad * SAT (s), as * LUM (d), as * ad))
  */
 static inline void
 blend_hsl_saturation (uint32_t c[3],
@@ -1146,9 +1218,12 @@ blend_hsl_saturation (uint32_t c[3],
 
 PDF_NON_SEPARABLE_BLEND_MODE (hsl_saturation)
 
-/*
- * Color:
- * B(Cb, Cs) = set_lum (Cs, LUM (Cb))
+/* 
+ * Color
+ *
+ *     as * ad * B(s/as, d/as)
+ *   = as * ad * set_lum (s/as, LUM (d/ad), 1)
+ *   = set_lum (s * ad, as * LUM (d), as * ad)
  */
 static inline void
 blend_hsl_color (uint32_t c[3],
@@ -1166,8 +1241,11 @@ blend_hsl_color (uint32_t c[3],
 PDF_NON_SEPARABLE_BLEND_MODE (hsl_color)
 
 /*
- * Luminosity:
- * B(Cb, Cs) = set_lum (Cb, LUM (Cs))
+ * Luminosity
+ *
+ *     as * ad * B(s/as, d/ad)
+ *   = as * ad * set_lum (d/ad, LUM (s/as), 1)
+ *   = set_lum (as * d, ad * LUM (s), as * ad)
  */
 static inline void
 blend_hsl_luminosity (uint32_t c[3],
