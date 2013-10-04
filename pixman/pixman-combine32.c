@@ -142,12 +142,12 @@ combine_mask (const uint32_t *src, const uint32_t *mask, int i)
 static void
 combine_clear (pixman_implementation_t *imp,
                pixman_op_t              op,
-               uint32_t *                dest,
-               const uint32_t *          src,
-               const uint32_t *          mask,
+               uint32_t *               dest,
+               const uint32_t *         src,
+               const uint32_t *         mask,
                int                      width)
 {
-    memset (dest, 0, width * sizeof(uint32_t));
+    memset (dest, 0, width * sizeof (uint32_t));
 }
 
 static void
@@ -155,7 +155,7 @@ combine_dst (pixman_implementation_t *imp,
 	     pixman_op_t	      op,
 	     uint32_t *		      dest,
 	     const uint32_t *	      src,
-	     const uint32_t *          mask,
+	     const uint32_t *         mask,
 	     int		      width)
 {
     return;
@@ -164,9 +164,9 @@ combine_dst (pixman_implementation_t *imp,
 static void
 combine_src_u (pixman_implementation_t *imp,
                pixman_op_t              op,
-               uint32_t *                dest,
-               const uint32_t *          src,
-               const uint32_t *          mask,
+               uint32_t *               dest,
+               const uint32_t *         src,
+               const uint32_t *         mask,
                int                      width)
 {
     int i;
@@ -189,9 +189,9 @@ combine_src_u (pixman_implementation_t *imp,
 static void
 combine_over_u (pixman_implementation_t *imp,
                 pixman_op_t              op,
-                uint32_t *                dest,
-                const uint32_t *          src,
-                const uint32_t *          mask,
+                uint32_t *               dest,
+                const uint32_t *         src,
+                const uint32_t *         mask,
                 int                      width)
 {
     int i;
@@ -254,9 +254,9 @@ combine_over_u (pixman_implementation_t *imp,
 static void
 combine_over_reverse_u (pixman_implementation_t *imp,
                         pixman_op_t              op,
-                        uint32_t *                dest,
-                        const uint32_t *          src,
-                        const uint32_t *          mask,
+                        uint32_t *               dest,
+                        const uint32_t *         src,
+                        const uint32_t *         mask,
                         int                      width)
 {
     int i;
@@ -274,9 +274,9 @@ combine_over_reverse_u (pixman_implementation_t *imp,
 static void
 combine_in_u (pixman_implementation_t *imp,
               pixman_op_t              op,
-              uint32_t *                dest,
-              const uint32_t *          src,
-              const uint32_t *          mask,
+              uint32_t *               dest,
+              const uint32_t *         src,
+              const uint32_t *         mask,
               int                      width)
 {
     int i;
@@ -293,9 +293,9 @@ combine_in_u (pixman_implementation_t *imp,
 static void
 combine_in_reverse_u (pixman_implementation_t *imp,
                       pixman_op_t              op,
-                      uint32_t *                dest,
-                      const uint32_t *          src,
-                      const uint32_t *          mask,
+                      uint32_t *               dest,
+                      const uint32_t *         src,
+                      const uint32_t *         mask,
                       int                      width)
 {
     int i;
@@ -313,9 +313,9 @@ combine_in_reverse_u (pixman_implementation_t *imp,
 static void
 combine_out_u (pixman_implementation_t *imp,
                pixman_op_t              op,
-               uint32_t *                dest,
-               const uint32_t *          src,
-               const uint32_t *          mask,
+               uint32_t *               dest,
+               const uint32_t *         src,
+               const uint32_t *         mask,
                int                      width)
 {
     int i;
@@ -332,9 +332,9 @@ combine_out_u (pixman_implementation_t *imp,
 static void
 combine_out_reverse_u (pixman_implementation_t *imp,
                        pixman_op_t              op,
-                       uint32_t *                dest,
-                       const uint32_t *          src,
-                       const uint32_t *          mask,
+                       uint32_t *               dest,
+                       const uint32_t *         src,
+                       const uint32_t *         mask,
                        int                      width)
 {
     int i;
@@ -352,9 +352,9 @@ combine_out_reverse_u (pixman_implementation_t *imp,
 static void
 combine_atop_u (pixman_implementation_t *imp,
                 pixman_op_t              op,
-                uint32_t *                dest,
-                const uint32_t *          src,
-                const uint32_t *          mask,
+                uint32_t *               dest,
+                const uint32_t *         src,
+                const uint32_t *         mask,
                 int                      width)
 {
     int i;
@@ -374,9 +374,9 @@ combine_atop_u (pixman_implementation_t *imp,
 static void
 combine_atop_reverse_u (pixman_implementation_t *imp,
                         pixman_op_t              op,
-                        uint32_t *                dest,
-                        const uint32_t *          src,
-                        const uint32_t *          mask,
+                        uint32_t *               dest,
+                        const uint32_t *         src,
+                        const uint32_t *         mask,
                         int                      width)
 {
     int i;
@@ -396,9 +396,9 @@ combine_atop_reverse_u (pixman_implementation_t *imp,
 static void
 combine_xor_u (pixman_implementation_t *imp,
                pixman_op_t              op,
-               uint32_t *                dest,
-               const uint32_t *          src,
-               const uint32_t *          mask,
+               uint32_t *               dest,
+               const uint32_t *         src,
+               const uint32_t *         mask,
                int                      width)
 {
     int i;
@@ -418,9 +418,9 @@ combine_xor_u (pixman_implementation_t *imp,
 static void
 combine_add_u (pixman_implementation_t *imp,
                pixman_op_t              op,
-               uint32_t *                dest,
-               const uint32_t *          src,
-               const uint32_t *          mask,
+               uint32_t *               dest,
+               const uint32_t *         src,
+               const uint32_t *         mask,
                int                      width)
 {
     int i;
@@ -437,9 +437,9 @@ combine_add_u (pixman_implementation_t *imp,
 static void
 combine_saturate_u (pixman_implementation_t *imp,
                     pixman_op_t              op,
-                    uint32_t *                dest,
-                    const uint32_t *          src,
-                    const uint32_t *          mask,
+                    uint32_t *               dest,
+                    const uint32_t *         src,
+                    const uint32_t *         mask,
                     int                      width)
 {
     int i;
@@ -493,9 +493,9 @@ combine_saturate_u (pixman_implementation_t *imp,
 static void
 combine_multiply_u (pixman_implementation_t *imp,
                     pixman_op_t              op,
-                    uint32_t *                dest,
-                    const uint32_t *          src,
-                    const uint32_t *          mask,
+                    uint32_t *               dest,
+                    const uint32_t *         src,
+                    const uint32_t *         mask,
                     int                      width)
 {
     int i;
@@ -519,9 +519,9 @@ combine_multiply_u (pixman_implementation_t *imp,
 static void
 combine_multiply_ca (pixman_implementation_t *imp,
                      pixman_op_t              op,
-                     uint32_t *                dest,
-                     const uint32_t *          src,
-                     const uint32_t *          mask,
+                     uint32_t *               dest,
+                     const uint32_t *         src,
+                     const uint32_t *         mask,
                      int                      width)
 {
     int i;
@@ -548,13 +548,14 @@ combine_multiply_ca (pixman_implementation_t *imp,
     static void								\
     combine_ ## name ## _u (pixman_implementation_t *imp,		\
 			    pixman_op_t              op,		\
-                            uint32_t *                dest,		\
-			    const uint32_t *          src,		\
-			    const uint32_t *          mask,		\
+                            uint32_t *               dest,		\
+			    const uint32_t *         src,		\
+			    const uint32_t *         mask,		\
 			    int                      width)		\
     {									\
 	int i;								\
-	for (i = 0; i < width; ++i) {					\
+	for (i = 0; i < width; ++i)					\
+	{								\
 	    uint32_t s = combine_mask (src, mask, i);			\
 	    uint32_t d = *(dest + i);					\
 	    uint8_t sa = ALPHA_8 (s);					\
@@ -577,13 +578,14 @@ combine_multiply_ca (pixman_implementation_t *imp,
     static void								\
     combine_ ## name ## _ca (pixman_implementation_t *imp,		\
 			     pixman_op_t              op,		\
-                             uint32_t *                dest,		\
-			     const uint32_t *          src,		\
-			     const uint32_t *          mask,		\
-			     int                     width)		\
+                             uint32_t *               dest,		\
+			     const uint32_t *         src,		\
+			     const uint32_t *         mask,		\
+			     int                      width)		\
     {									\
 	int i;								\
-	for (i = 0; i < width; ++i) {					\
+	for (i = 0; i < width; ++i)					\
+	{								\
 	    uint32_t m = *(mask + i);					\
 	    uint32_t s = *(src + i);					\
 	    uint32_t d = *(dest + i);					\
@@ -942,11 +944,11 @@ PDF_SEPARABLE_BLEND_MODE (exclusion)
 #define PDF_NON_SEPARABLE_BLEND_MODE(name)				\
     static void								\
     combine_ ## name ## _u (pixman_implementation_t *imp,		\
-			    pixman_op_t op,				\
-                            uint32_t *dest,				\
-			    const uint32_t *src,				\
-			    const uint32_t *mask,			\
-			    int width)					\
+			    pixman_op_t		     op,		\
+                            uint32_t *               dest,		\
+			    const uint32_t *         src,		\
+			    const uint32_t *         mask,		\
+			    int                      width)		\
     {									\
 	int i;								\
 	for (i = 0; i < width; ++i)					\
@@ -1194,7 +1196,7 @@ PDF_NON_SEPARABLE_BLEND_MODE (hsl_luminosity)
  * come from each of the four areas of the picture -- areas covered by neither
  * A nor B, areas covered only by A, areas covered only by B and finally
  * areas covered by both A and B.
- * 
+ *
  * Disjoint			Conjoint
  * Fa		Fb		Fa		Fb
  * (0,0,0,0)	0		0		0		0
