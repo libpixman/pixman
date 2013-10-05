@@ -183,6 +183,7 @@ AC_SUBST(LT_VERSION_INFO)
 # Check for dependencies
 
 PIXMAN_CHECK_CFLAG([-Wall])
+PIXMAN_CHECK_CFLAG([-Wdeclaration-after-statement])
 PIXMAN_CHECK_CFLAG([-fno-strict-aliasing])
 
 dnl =========================================================================
