@@ -355,6 +355,12 @@ int main () {
         : "y" (v), "K" (5)
     );
 
+    /* Some versions of clang will choke on this */
+    asm ("pmulhuw %1, %0\n\t"
+	: "+y" (w)
+	: "y" (v)
+    );
+
     return _mm_cvtsi64_si32 (v);
 }]])], have_mmx_intrinsics=yes)
 CFLAGS=$xserver_save_CFLAGS
