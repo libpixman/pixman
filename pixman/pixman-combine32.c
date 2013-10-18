@@ -640,13 +640,18 @@ combine_multiply_ca (pixman_implementation_t *imp,
 	    uint8_t da = ALPHA_8 (d);					\
 	    uint8_t ida = ~da;						\
 	    int32_t ra, rr, rg, rb;					\
+	    uint8_t ira, iga, iba;					\
 	    								\
 	    combine_mask_ca (&s, &m);					\
 	    								\
+	    ira = ~RED_8 (m);						\
+	    iga = ~GREEN_8 (m);						\
+	    iba = ~BLUE_8 (m);						\
+									\
 	    ra = da * 0xff + ALPHA_8 (s) * 0xff - ALPHA_8 (s) * da;	\
-	    rr = (~RED_8 (m)) * RED_8 (d) + ida * RED_8 (s);		\
-	    rg = (~GREEN_8 (m)) * GREEN_8 (d) + ida * GREEN_8 (s);	\
-	    rb = (~BLUE_8 (m)) * BLUE_8 (d) + ida * BLUE_8 (s);		\
+	    rr = ira * RED_8 (d) + ida * RED_8 (s);			\
+	    rg = iga * GREEN_8 (d) + ida * GREEN_8 (s);			\
+	    rb = iba * BLUE_8 (d) + ida * BLUE_8 (s);			\
 									\
 	    rr += blend_ ## name (RED_8 (d), da, RED_8 (s), RED_8 (m));	\
 	    rg += blend_ ## name (GREEN_8 (d), da, GREEN_8 (s), GREEN_8 (m)); \
