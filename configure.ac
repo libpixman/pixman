@@ -1044,6 +1044,22 @@ fi
 
 AC_MSG_RESULT($support_for_float128)
 
+dnl =====================================
+dnl __builtin_clz
+
+support_for_builtin_clz=no
+
+AC_MSG_CHECKING(for __builtin_clz)
+AC_LINK_IFELSE([AC_LANG_SOURCE([[
+unsigned int x = 11; int main (void) { return __builtin_clz(x); }
+]])], support_for_builtin_clz=yes)
+
+if test x$support_for_builtin_clz = xyes; then
+   AC_DEFINE([HAVE_BUILTIN_CLZ], [], [Whether the compiler supports __builtin_clz])
+fi
+
+AC_MSG_RESULT($support_for_builtin_clz)
+
 dnl ==================
 dnl libpng
 
