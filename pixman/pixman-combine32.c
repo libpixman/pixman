@@ -893,7 +893,7 @@ blend_soft_light (int32_t d_org,
     }
     else if (ad == 0)
     {
-	r = 0;
+	r = d * as;
     }
     else if (4 * d <= ad)
     {

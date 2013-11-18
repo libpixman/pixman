@@ -449,7 +449,7 @@ blend_soft_light (float sa, float s, float da, float d)
     {
 	if (FLOAT_IS_ZERO (da))
 	{
-	    return 0.0f;
+	    return d * sa;
 	}
 	else
 	{

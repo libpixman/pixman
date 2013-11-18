@@ -1198,7 +1198,7 @@ blend_soft_light (double sa, double s, double da, double d)
     {
         if (IS_ZERO (da))
         {
-            return 0.0f;
+	    return d * sa;
         }
         else
         {
