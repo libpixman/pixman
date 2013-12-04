@@ -33,6 +33,8 @@ struct pixel_combination_t
     pixman_op_t			op;
     pixman_format_code_t	src_format;
     uint32_t			src_pixel;
+    pixman_format_code_t	mask_format;
+    uint32_t			mask_pixel;
     pixman_format_code_t	dest_format;
     uint32_t			dest_pixel;
 };
@@ -41,58 +43,72 @@ static const pixel_combination_t regressions[] =
 {
     { PIXMAN_OP_OVER,
       PIXMAN_a8r8g8b8,	0x0f00c300,
+      PIXMAN_null,	0x00,
       PIXMAN_x14r6g6b6,	0x003c0,
     },
     { PIXMAN_OP_DISJOINT_XOR,
       PIXMAN_a4r4g4b4,	0xd0c0,
+      PIXMAN_null,	0x00,
       PIXMAN_a8r8g8b8,	0x5300ea00,
     },
     { PIXMAN_OP_OVER,
       PIXMAN_a8r8g8b8,	0x20c6bf00,
+      PIXMAN_null,	0x00,
       PIXMAN_r5g6b5,	0xb9ff
     },
     { PIXMAN_OP_OVER,
       PIXMAN_a8r8g8b8,	0x204ac7ff,
+      PIXMAN_null,	0x00,
       PIXMAN_r5g6b5,	0xc1ff
     },
     { PIXMAN_OP_OVER_REVERSE,
       PIXMAN_r5g6b5,	0xffc3,
+      PIXMAN_null,	0x00,
       PIXMAN_a8r8g8b8,	0x102d00dd
     },
     { PIXMAN_OP_OVER_REVERSE,
       PIXMAN_r5g6b5,	0x1f00,
+      PIXMAN_null,	0x00,
       PIXMAN_a8r8g8b8,	0x1bdf0c89
     },
     { PIXMAN_OP_OVER_REVERSE,
       PIXMAN_r5g6b5,	0xf9d2,
+      PIXMAN_null,	0x00,
       PIXMAN_a8r8g8b8,	0x1076bcf7
     },
     { PIXMAN_OP_OVER_REVERSE,
       PIXMAN_r5g6b5,	0x00c3,
+      PIXMAN_null,	0x00,
       PIXMAN_a8r8g8b8,	0x1bfe9ae5
     },
     { PIXMAN_OP_OVER_REVERSE,
       PIXMAN_r5g6b5,	0x09ff,
+      PIXMAN_null,	0x00,
       PIXMAN_a8r8g8b8,	0x0b00c16c
     },
     { PIXMAN_OP_DISJOINT_ATOP,
       PIXMAN_a2r2g2b2,	0xbc,
+      PIXMAN_null,	0x00,
       PIXMAN_a8r8g8b8,	0x9efff1ff
     },
     { PIXMAN_OP_DISJOINT_ATOP,
       PIXMAN_a4r4g4b4,	0xae5f,
+      PIXMAN_null,	0x00,
       PIXMAN_a8r8g8b8,	0xf215b675
     },
     { PIXMAN_OP_DISJOINT_ATOP_REVERSE,
       PIXMAN_a8r8g8b8,	0xce007980,
+      PIXMAN_null,	0x00,
       PIXMAN_a8r8g8b8,	0x80ffe4ad
     },
     { PIXMAN_OP_DISJOINT_XOR,
       PIXMAN_a8r8g8b8,	0xb8b07bea,
+      PIXMAN_null,	0x00,
       PIXMAN_a4r4g4b4,	0x939c
     },
     { PIXMAN_OP_CONJOINT_ATOP_REVERSE,
       PIXMAN_r5g6b5,	0x0063,
+      PIXMAN_null,	0x00,
       PIXMAN_a8r8g8b8,	0x10bb1ed7,
     },
 };
@@ -159,35 +175,59 @@ access (pixman_image_t *image, int x, int y)
 }
 
 static pixman_bool_t
-verify (int test_no, const pixel_combination_t *combination, int size)
+verify (int test_no, const pixel_combination_t *combination, int size,
+	pixman_bool_t component_alpha)
 {
-    pixman_image_t *src, *dest;
-    pixel_checker_t src_checker, dest_checker;
-    color_t source_color, dest_color, reference_color;
+    pixman_image_t *src, *mask, *dest;
+    pixel_checker_t src_checker, mask_checker, dest_checker;
+    color_t source_color, mask_color, dest_color, reference_color;
+    pixman_bool_t have_mask = (combination->mask_format != PIXMAN_null);
     pixman_bool_t result = TRUE;
     int i, j;
 
     /* Compute reference color */
     pixel_checker_init (&src_checker, combination->src_format);
+    if (have_mask)
+	pixel_checker_init (&mask_checker, combination->mask_format);
     pixel_checker_init (&dest_checker, combination->dest_format);
+
     pixel_checker_convert_pixel_to_color (
 	&src_checker, combination->src_pixel, &source_color);
+    if (combination->mask_format != PIXMAN_null)
+    {
+	pixel_checker_convert_pixel_to_color (
+	    &mask_checker, combination->mask_pixel, &mask_color);
+    }
     pixel_checker_convert_pixel_to_color (
 	&dest_checker, combination->dest_pixel, &dest_color);
+
     do_composite (combination->op,
-		  &source_color, NULL, &dest_color,
-		  &reference_color, FALSE);
+		  &source_color,
+		  have_mask? &mask_color : NULL,
+		  &dest_color,
+		  &reference_color, component_alpha);
 
     src = pixman_image_create_bits (
 	combination->src_format, size, size, NULL, -1);
+    if (have_mask)
+    {
+	mask = pixman_image_create_bits (
+	    combination->mask_format, size, size, NULL, -1);
+
+	pixman_image_set_component_alpha (mask, component_alpha);
+    }
     dest = pixman_image_create_bits (
 	combination->dest_format, size, size, NULL, -1);
 
     fill (src, combination->src_pixel);
+    if (have_mask)
+	fill (mask, combination->mask_pixel);
     fill (dest, combination->dest_pixel);
 
     pixman_image_composite32 (
-	combination->op, src, NULL, dest, 0, 0, 0, 0, 0, 0, size, size);
+	combination->op, src, 
+	have_mask ? mask : NULL,
+	dest, 0, 0, 0, 0, 0, 0, size, size);
 
     for (j = 0; j < size; ++j)
     {
@@ -200,15 +240,29 @@ verify (int test_no, const pixel_combination_t *combination, int size)
 	    {
 		printf ("----------- Test %d failed ----------\n", test_no);
 
-		printf ("   operator:         %s\n", operator_name (combination->op));
+		printf ("   operator:         %s (%s)\n", operator_name (combination->op),
+			have_mask? component_alpha ? "component alpha" : "unified alpha" : "no mask");
 		printf ("   src format:       %s\n", format_name (combination->src_format));
+		if (have_mask != PIXMAN_null)
+		    printf ("   mask format:      %s\n", format_name (combination->mask_format));
 		printf ("   dest format:      %s\n", format_name (combination->dest_format));
+
                 printf (" - source ARGB:      %f  %f  %f  %f   (pixel: %8x)\n",
                         source_color.a, source_color.r, source_color.g, source_color.b,
                         combination->src_pixel);
 		pixel_checker_split_pixel (&src_checker, combination->src_pixel,
 					   &a, &r, &g, &b);
                 printf ("                     %8d  %8d  %8d  %8d\n", a, r, g, b);
+
+		if (have_mask)
+		{
+		    printf (" - mask ARGB:        %f  %f  %f  %f   (pixel: %8x)\n",
+			    mask_color.a, mask_color.r, mask_color.g, mask_color.b,
+			    combination->mask_pixel);
+		    pixel_checker_split_pixel (&mask_checker, combination->mask_pixel,
+					       &a, &r, &g, &b);
+		    printf ("                     %8d  %8d  %8d  %8d\n", a, r, g, b);
+		}
 
                 printf (" - dest ARGB:        %f  %f  %f  %f   (pixel: %8x)\n",
                         dest_color.a, dest_color.r, dest_color.g, dest_color.b,
@@ -255,12 +309,22 @@ main (int argc, char **argv)
 
 	for (j = 1; j < 34; ++j)
 	{
-	    if (!verify (i, combination, j))
+	    int k, ca;
+
+	    ca = combination->mask_format == PIXMAN_null ? 1 : 2;
+
+	    for (k = 0; k < ca; ++k)
 	    {
-		result = 1;
-		break;
+		if (!verify (i, combination, j, k))
+		{
+		    result = 1;
+		    goto next_regression;
+		}
 	    }
 	}
+
+    next_regression:
+	;
     }
 
     return result;
