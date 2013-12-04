@@ -302,8 +302,20 @@ main (int argc, char **argv)
 {
     int result = 0;
     int i, j;
+    int lo, hi;
 
-    for (i = 0; i < ARRAY_LENGTH (regressions); ++i)
+    if (argc > 1)
+    {
+	lo = atoi (argv[1]);
+	hi = lo + 1;
+    }
+    else
+    {
+	lo = 0;
+	hi = ARRAY_LENGTH (regressions);
+    }
+
+    for (i = lo; i < hi; ++i)
     {
 	const pixel_combination_t *combination = &(regressions[i]);
 
