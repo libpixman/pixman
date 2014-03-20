@@ -755,18 +755,18 @@ fname:
         leading_15bytes  process_head, process_tail
         
 154:    /* Destination now 16-byte aligned; we have at least one prefetch on each channel as well as at least one 16-byte output block */
- .if (src_bpp > 0) && (mask_bpp == 0) && ((flags) & FLAG_PROCESS_PRESERVES_SCRATCH)
+  .if (src_bpp > 0) && (mask_bpp == 0) && ((flags) & FLAG_PROCESS_PRESERVES_SCRATCH)
         and     SCRATCH, SRC, #31
         rsb     SCRATCH, SCRATCH, #32*prefetch_distance
- .elseif (src_bpp == 0) && (mask_bpp > 0) && ((flags) & FLAG_PROCESS_PRESERVES_SCRATCH)
+  .elseif (src_bpp == 0) && (mask_bpp > 0) && ((flags) & FLAG_PROCESS_PRESERVES_SCRATCH)
         and     SCRATCH, MASK, #31
         rsb     SCRATCH, SCRATCH, #32*prefetch_distance
- .endif
- .ifc "process_inner_loop",""
+  .endif
+  .ifc "process_inner_loop",""
         switch_on_alignment  wide_case_inner_loop_and_trailing_pixels, process_head, process_tail, wide_case_inner_loop, 157f
- .else
+  .else
         switch_on_alignment  wide_case_inner_loop_and_trailing_pixels, process_head, process_tail, process_inner_loop, 157f
- .endif
+  .endif
 
 157:    /* Check for another line */
         end_of_line 1, %((flags) & FLAG_SPILL_LINE_VARS_WIDE), 151b
