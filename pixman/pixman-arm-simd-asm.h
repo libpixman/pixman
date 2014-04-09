@@ -80,6 +80,12 @@
 .set FLAG_PROCESS_CORRUPTS_WK0,      128 /* if possible, use the specified register(s) instead so WK0 can hold number of leading pixels */
 
 /*
+ * Number of bytes by which to adjust preload offset of destination
+ * buffer (allows preload instruction to be moved before the load(s))
+ */
+.set DST_PRELOAD_BIAS, 0
+
+/*
  * Offset into stack where mask and source pointer/stride can be accessed.
  */
 #ifdef DEBUG_PARAMS
@@ -462,11 +468,11 @@
  .if dst_r_bpp > 0
         tst     DST, #16
         bne     111f
-        process_inner_loop  process_head, process_tail, unaligned_src, unaligned_mask, 16
+        process_inner_loop  process_head, process_tail, unaligned_src, unaligned_mask, 16 + DST_PRELOAD_BIAS
         b       112f
 111:
  .endif
-        process_inner_loop  process_head, process_tail, unaligned_src, unaligned_mask, 0
+        process_inner_loop  process_head, process_tail, unaligned_src, unaligned_mask, 0 + DST_PRELOAD_BIAS
 112:
         /* Just before the final (prefetch_distance+1) 32-byte blocks, deal with final preloads */
  .if (src_bpp*pix_per_block > 256) || (mask_bpp*pix_per_block > 256) || (dst_r_bpp*pix_per_block > 256)

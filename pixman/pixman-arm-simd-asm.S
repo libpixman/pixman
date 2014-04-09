@@ -37,6 +37,7 @@
 	.altmacro
 	.p2align 2
 
+#include "pixman-arm-asm.h"
 #include "pixman-arm-simd-asm.h"
 
 /* A head macro should do all processing which results in an output of up to
@@ -686,6 +687,272 @@ generate_composite_function \
     nop_macro, /* cleanup */ \
     over_reverse_n_8888_process_head, \
     over_reverse_n_8888_process_tail
+
+/******************************************************************************/
+
+.macro over_white_8888_8888_ca_init
+        HALF    .req    SRC
+        TMP0    .req    STRIDE_D
+        TMP1    .req    STRIDE_S
+        TMP2    .req    STRIDE_M
+        TMP3    .req    ORIG_W
+        WK4     .req    SCRATCH
+        line_saved_regs STRIDE_D, STRIDE_M, ORIG_W
+        ldr     SCRATCH, =0x800080
+        mov     HALF, #0x80
+        /* Set GE[3:0] to 0101 so SEL instructions do what we want */
+        uadd8   SCRATCH, SCRATCH, SCRATCH
+        .set DST_PRELOAD_BIAS, 8
+.endm
+
+.macro over_white_8888_8888_ca_cleanup
+        .set DST_PRELOAD_BIAS, 0
+        .unreq  HALF
+        .unreq  TMP0
+        .unreq  TMP1
+        .unreq  TMP2
+        .unreq  TMP3
+        .unreq  WK4
+.endm
+
+.macro over_white_8888_8888_ca_combine  m, d
+        uxtb16  TMP1, TMP0                /* rb_notmask */
+        uxtb16  TMP2, d                   /* rb_dest; 1 stall follows */
+        smlatt  TMP3, TMP2, TMP1, HALF    /* red */
+        smlabb  TMP2, TMP2, TMP1, HALF    /* blue */
+        uxtb16  TMP0, TMP0, ror #8        /* ag_notmask */
+        uxtb16  TMP1, d, ror #8           /* ag_dest; 1 stall follows */
+        smlatt  d, TMP1, TMP0, HALF       /* alpha */
+        smlabb  TMP1, TMP1, TMP0, HALF    /* green */
+        pkhbt   TMP0, TMP2, TMP3, lsl #16 /* rb; 1 stall follows */
+        pkhbt   TMP1, TMP1, d, lsl #16    /* ag */
+        uxtab16 TMP0, TMP0, TMP0, ror #8
+        uxtab16 TMP1, TMP1, TMP1, ror #8
+        mov     TMP0, TMP0, ror #8
+        sel     d, TMP0, TMP1
+        uqadd8  d, d, m                   /* d is a late result */
+.endm
+
+.macro over_white_8888_8888_ca_1pixel_head
+        pixld   , 4, 1, MASK, 0
+        pixld   , 4, 3, DST, 0
+.endm
+
+.macro over_white_8888_8888_ca_1pixel_tail
+        mvn     TMP0, WK1
+        teq     WK1, WK1, asr #32
+        bne     01f
+        bcc     03f
+        mov     WK3, WK1
+        b       02f
+01:     over_white_8888_8888_ca_combine WK1, WK3
+02:     pixst   , 4, 3, DST
+03:
+.endm
+
+.macro over_white_8888_8888_ca_2pixels_head
+        pixld   , 8, 1, MASK, 0
+.endm
+
+.macro over_white_8888_8888_ca_2pixels_tail
+        pixld   , 8, 3, DST
+        mvn     TMP0, WK1
+        teq     WK1, WK1, asr #32
+        bne     01f
+        movcs   WK3, WK1
+        bcs     02f
+        teq     WK2, #0
+        beq     05f
+        b       02f
+01:     over_white_8888_8888_ca_combine WK1, WK3
+02:     mvn     TMP0, WK2
+        teq     WK2, WK2, asr #32
+        bne     03f
+        movcs   WK4, WK2
+        b       04f
+03:     over_white_8888_8888_ca_combine WK2, WK4
+04:     pixst   , 8, 3, DST
+05:
+.endm
+
+.macro over_white_8888_8888_ca_process_head  cond, numbytes, firstreg, unaligned_src, unaligned_mask, preload
+ .if numbytes == 4
+        over_white_8888_8888_ca_1pixel_head
+ .else
+  .if numbytes == 16
+        over_white_8888_8888_ca_2pixels_head
+        over_white_8888_8888_ca_2pixels_tail
+  .endif
+        over_white_8888_8888_ca_2pixels_head
+ .endif
+.endm
+
+.macro over_white_8888_8888_ca_process_tail  cond, numbytes, firstreg
+ .if numbytes == 4
+        over_white_8888_8888_ca_1pixel_tail
+ .else
+        over_white_8888_8888_ca_2pixels_tail
+ .endif
+.endm
+
+generate_composite_function \
+    pixman_composite_over_white_8888_8888_ca_asm_armv6, 0, 32, 32 \
+    FLAG_DST_READWRITE | FLAG_BRANCH_OVER | FLAG_PROCESS_CORRUPTS_PSR | FLAG_PROCESS_DOES_STORE | FLAG_SPILL_LINE_VARS | FLAG_PROCESS_CORRUPTS_SCRATCH \
+    2, /* prefetch distance */ \
+    over_white_8888_8888_ca_init, \
+    nop_macro, /* newline */ \
+    over_white_8888_8888_ca_cleanup, \
+    over_white_8888_8888_ca_process_head, \
+    over_white_8888_8888_ca_process_tail
+
+
+.macro over_n_8888_8888_ca_init
+        /* Set up constants. RB_SRC and AG_SRC are in registers;
+         * RB_FLDS, A_SRC, and the two HALF values need to go on the
+         * stack (and the ful SRC value is already there) */
+        ldr     SCRATCH, [sp, #ARGS_STACK_OFFSET]
+        mov     WK0, #0x00FF0000
+        orr     WK0, WK0, #0xFF        /* RB_FLDS (0x00FF00FF) */
+        mov     WK1, #0x80             /* HALF default value */
+        mov     WK2, SCRATCH, lsr #24  /* A_SRC */
+        orr     WK3, WK1, WK1, lsl #16 /* HALF alternate value (0x00800080) */
+        push    {WK0-WK3}
+ .set ARGS_STACK_OFFSET, ARGS_STACK_OFFSET+16
+        uxtb16  SRC, SCRATCH
+        uxtb16  STRIDE_S, SCRATCH, ror #8
+
+        /* Set GE[3:0] to 0101 so SEL instructions do what we want */
+        uadd8   SCRATCH, WK3, WK3
+
+        .unreq  WK0
+        .unreq  WK1
+        .unreq  WK2
+        .unreq  WK3
+        WK0     .req    Y
+        WK1     .req    STRIDE_D
+        RB_SRC  .req    SRC
+        AG_SRC  .req    STRIDE_S
+        WK2     .req    STRIDE_M
+        RB_FLDS .req    r8       /* the reloaded constants have to be at consecutive registers starting at an even one */
+        A_SRC   .req    r8
+        HALF    .req    r9
+        WK3     .req    r10
+        WK4     .req    r11
+        WK5     .req    SCRATCH
+        WK6     .req    ORIG_W
+
+        line_saved_regs Y, STRIDE_D, STRIDE_M, ORIG_W
+.endm
+
+.macro over_n_8888_8888_ca_cleanup
+        add     sp, sp, #16
+ .set ARGS_STACK_OFFSET, ARGS_STACK_OFFSET-16
+
+        .unreq  WK0
+        .unreq  WK1
+        .unreq  RB_SRC
+        .unreq  AG_SRC
+        .unreq  WK2
+        .unreq  RB_FLDS
+        .unreq  A_SRC
+        .unreq  HALF
+        .unreq  WK3
+        .unreq  WK4
+        .unreq  WK5
+        .unreq  WK6
+        WK0     .req    r8
+        WK1     .req    r9
+        WK2     .req    r10
+        WK3     .req    r11
+.endm
+
+.macro over_n_8888_8888_ca_1pixel_head
+        pixld   , 4, 6, MASK, 0
+        pixld   , 4, 0, DST, 0
+.endm
+
+.macro over_n_8888_8888_ca_1pixel_tail
+        ldrd    A_SRC, HALF, [sp, #LOCALS_STACK_OFFSET+8]
+        uxtb16  WK1, WK6                 /* rb_mask (first step of hard case placed in what would otherwise be a stall) */
+        teq     WK6, WK6, asr #32        /* Zc if transparent, ZC if opaque */
+        bne     20f
+        bcc     40f
+        /* Mask is fully opaque (all channels) */
+        ldr     WK6, [sp, #ARGS_STACK_OFFSET] /* get SRC back */
+        eors    A_SRC, A_SRC, #0xFF
+        bne     10f
+        /* Source is also opaque - same as src_8888_8888 */
+        mov     WK0, WK6
+        b       30f
+10:     /* Same as over_8888_8888 */
+        mul_8888_8 WK0, A_SRC, WK5, HALF
+        uqadd8  WK0, WK0, WK6
+        b       30f
+20:     /* No simplifications possible - do it the hard way */
+        uxtb16  WK2, WK6, ror #8         /* ag_mask */
+        mla     WK3, WK1, A_SRC, HALF    /* rb_mul; 2 cycles */
+        mla     WK4, WK2, A_SRC, HALF    /* ag_mul; 2 cycles */
+        ldrd    RB_FLDS, HALF, [sp, #LOCALS_STACK_OFFSET]
+        uxtb16  WK5, WK0                 /* rb_dest */
+        uxtab16 WK3, WK3, WK3, ror #8
+        uxtb16  WK6, WK0, ror #8         /* ag_dest */
+        uxtab16 WK4, WK4, WK4, ror #8
+        smlatt  WK0, RB_SRC, WK1, HALF   /* red1 */
+        smlabb  WK1, RB_SRC, WK1, HALF   /* blue1 */
+        bic     WK3, RB_FLDS, WK3, lsr #8
+        bic     WK4, RB_FLDS, WK4, lsr #8
+        pkhbt   WK1, WK1, WK0, lsl #16   /* rb1 */
+        smlatt  WK0, WK5, WK3, HALF      /* red2 */
+        smlabb  WK3, WK5, WK3, HALF      /* blue2 */
+        uxtab16 WK1, WK1, WK1, ror #8
+        smlatt  WK5, AG_SRC, WK2, HALF   /* alpha1 */
+        pkhbt   WK3, WK3, WK0, lsl #16   /* rb2 */
+        smlabb  WK0, AG_SRC, WK2, HALF   /* green1 */
+        smlatt  WK2, WK6, WK4, HALF      /* alpha2 */
+        smlabb  WK4, WK6, WK4, HALF      /* green2 */
+        pkhbt   WK0, WK0, WK5, lsl #16   /* ag1 */
+        uxtab16 WK3, WK3, WK3, ror #8
+        pkhbt   WK4, WK4, WK2, lsl #16   /* ag2 */
+        uxtab16 WK0, WK0, WK0, ror #8
+        uxtab16 WK4, WK4, WK4, ror #8
+        mov     WK1, WK1, ror #8
+        mov     WK3, WK3, ror #8
+        sel     WK2, WK1, WK0            /* recombine source*mask */
+        sel     WK1, WK3, WK4            /* recombine dest*(1-source_alpha*mask) */
+        uqadd8  WK0, WK1, WK2            /* followed by 1 stall */
+30:     /* The destination buffer is already in the L1 cache, so
+         * there's little point in amalgamating writes */
+        pixst   , 4, 0, DST
+40:
+.endm
+
+.macro over_n_8888_8888_ca_process_head  cond, numbytes, firstreg, unaligned_src, unaligned_mask, preload
+ .rept (numbytes / 4) - 1
+        over_n_8888_8888_ca_1pixel_head
+        over_n_8888_8888_ca_1pixel_tail
+ .endr
+        over_n_8888_8888_ca_1pixel_head
+.endm
+
+.macro over_n_8888_8888_ca_process_tail  cond, numbytes, firstreg
+        over_n_8888_8888_ca_1pixel_tail
+.endm
+
+pixman_asm_function pixman_composite_over_n_8888_8888_ca_asm_armv6
+        ldr     ip, [sp]
+        cmp     ip, #-1
+        beq     pixman_composite_over_white_8888_8888_ca_asm_armv6
+        /* else drop through... */
+ .endfunc
+generate_composite_function \
+    pixman_composite_over_n_8888_8888_ca_asm_armv6_helper, 0, 32, 32 \
+    FLAG_DST_READWRITE | FLAG_BRANCH_OVER | FLAG_PROCESS_CORRUPTS_PSR | FLAG_PROCESS_DOES_STORE | FLAG_SPILL_LINE_VARS | FLAG_PROCESS_CORRUPTS_SCRATCH | FLAG_PROCESS_CORRUPTS_WK0 \
+    2, /* prefetch distance */ \
+    over_n_8888_8888_ca_init, \
+    nop_macro, /* newline */ \
+    over_n_8888_8888_ca_cleanup, \
+    over_n_8888_8888_ca_process_head, \
+    over_n_8888_8888_ca_process_tail
 
 /******************************************************************************/
 
