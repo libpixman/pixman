@@ -76,6 +76,8 @@
 .set FLAG_SPILL_LINE_VARS,           48
 .set FLAG_PROCESS_CORRUPTS_SCRATCH,  0
 .set FLAG_PROCESS_PRESERVES_SCRATCH, 64
+.set FLAG_PROCESS_PRESERVES_WK0,     0
+.set FLAG_PROCESS_CORRUPTS_WK0,      128 /* if possible, use the specified register(s) instead so WK0 can hold number of leading pixels */
 
 /*
  * Offset into stack where mask and source pointer/stride can be accessed.
@@ -85,6 +87,11 @@
 #else
 .set ARGS_STACK_OFFSET,        (9*4)
 #endif
+
+/*
+ * Offset into stack where space allocated during init macro can be accessed.
+ */
+.set LOCALS_STACK_OFFSET,     0
 
 /*
  * Constants for selecting preferable prefetch type.
@@ -359,23 +366,41 @@
 
 
 .macro test_bits_1_0_ptr
+ .if (flags) & FLAG_PROCESS_CORRUPTS_WK0
+        movs    SCRATCH, X, lsl #32-1  /* C,N = bits 1,0 of DST */
+ .else
         movs    SCRATCH, WK0, lsl #32-1  /* C,N = bits 1,0 of DST */
+ .endif
 .endm
 
 .macro test_bits_3_2_ptr
+ .if (flags) & FLAG_PROCESS_CORRUPTS_WK0
+        movs    SCRATCH, X, lsl #32-3  /* C,N = bits 3, 2 of DST */
+ .else
         movs    SCRATCH, WK0, lsl #32-3  /* C,N = bits 3, 2 of DST */
+ .endif
 .endm
 
 .macro leading_15bytes  process_head, process_tail
         /* On entry, WK0 bits 0-3 = number of bytes until destination is 16-byte aligned */
+ .set DECREMENT_X, 1
+ .if (flags) & FLAG_PROCESS_CORRUPTS_WK0
+  .set DECREMENT_X, 0
+        sub     X, X, WK0, lsr #dst_bpp_shift
+        str     X, [sp, #LINE_SAVED_REG_COUNT*4]
+        mov     X, WK0
+ .endif
         /* Use unaligned loads in all cases for simplicity */
  .if dst_w_bpp == 8
-        conditional_process2  test_bits_1_0_ptr, mi, cs, process_head, process_tail, 1, 2, 1, 2, 1, 1, 1
+        conditional_process2  test_bits_1_0_ptr, mi, cs, process_head, process_tail, 1, 2, 1, 2, 1, 1, DECREMENT_X
  .elseif dst_w_bpp == 16
         test_bits_1_0_ptr
-        conditional_process1  cs, process_head, process_tail, 2, 2, 1, 1, 1
+        conditional_process1  cs, process_head, process_tail, 2, 2, 1, 1, DECREMENT_X
  .endif
-        conditional_process2  test_bits_3_2_ptr, mi, cs, process_head, process_tail, 4, 8, 1, 2, 1, 1, 1
+        conditional_process2  test_bits_3_2_ptr, mi, cs, process_head, process_tail, 4, 8, 1, 2, 1, 1, DECREMENT_X
+ .if (flags) & FLAG_PROCESS_CORRUPTS_WK0
+        ldr     X, [sp, #LINE_SAVED_REG_COUNT*4]
+ .endif
 .endm
 
 .macro test_bits_3_2_pix
@@ -705,6 +730,13 @@ fname:
 #endif
 
         init
+
+ .if (flags) & FLAG_PROCESS_CORRUPTS_WK0
+        /* Reserve a word in which to store X during leading pixels */
+        sub     sp, sp, #4
+  .set ARGS_STACK_OFFSET, ARGS_STACK_OFFSET+4
+  .set LOCALS_STACK_OFFSET, LOCALS_STACK_OFFSET+4
+ .endif
         
         lsl     STRIDE_D, #dst_bpp_shift /* stride in bytes */
         sub     STRIDE_D, STRIDE_D, X, lsl #dst_bpp_shift
@@ -734,6 +766,8 @@ fname:
   .if (flags) & FLAG_SPILL_LINE_VARS_WIDE
         /* This is stmdb sp!,{} */
         .word   0xE92D0000 | LINE_SAVED_REGS
+   .set ARGS_STACK_OFFSET, ARGS_STACK_OFFSET + LINE_SAVED_REG_COUNT*4
+   .set LOCALS_STACK_OFFSET, LOCALS_STACK_OFFSET + LINE_SAVED_REG_COUNT*4
   .endif
 151:    /* New line */
         newline
@@ -767,6 +801,10 @@ fname:
 
 157:    /* Check for another line */
         end_of_line 1, %((flags) & FLAG_SPILL_LINE_VARS_WIDE), 151b
+  .if (flags) & FLAG_SPILL_LINE_VARS_WIDE
+   .set ARGS_STACK_OFFSET, ARGS_STACK_OFFSET - LINE_SAVED_REG_COUNT*4
+   .set LOCALS_STACK_OFFSET, LOCALS_STACK_OFFSET - LINE_SAVED_REG_COUNT*4
+  .endif
  .endif
 
  .ltorg
@@ -776,6 +814,8 @@ fname:
  .if (flags) & FLAG_SPILL_LINE_VARS_NON_WIDE
         /* This is stmdb sp!,{} */
         .word   0xE92D0000 | LINE_SAVED_REGS
+  .set ARGS_STACK_OFFSET, ARGS_STACK_OFFSET + LINE_SAVED_REG_COUNT*4
+  .set LOCALS_STACK_OFFSET, LOCALS_STACK_OFFSET + LINE_SAVED_REG_COUNT*4
  .endif
 161:    /* New line */
         newline
@@ -841,12 +881,22 @@ fname:
 
 177:    /* Check for another line */
         end_of_line %(dst_w_bpp < 32), %((flags) & FLAG_SPILL_LINE_VARS_NON_WIDE), 171b, last_one
+ .if (flags) & FLAG_SPILL_LINE_VARS_NON_WIDE
+  .set ARGS_STACK_OFFSET, ARGS_STACK_OFFSET - LINE_SAVED_REG_COUNT*4
+  .set LOCALS_STACK_OFFSET, LOCALS_STACK_OFFSET - LINE_SAVED_REG_COUNT*4
+ .endif
 
 197:
  .if (flags) & FLAG_SPILL_LINE_VARS
         add     sp, sp, #LINE_SAVED_REG_COUNT*4
  .endif
 198:
+ .if (flags) & FLAG_PROCESS_CORRUPTS_WK0
+  .set ARGS_STACK_OFFSET, ARGS_STACK_OFFSET-4
+  .set LOCALS_STACK_OFFSET, LOCALS_STACK_OFFSET-4
+        add     sp, sp, #4
+ .endif
+
         cleanup
 
 #ifdef DEBUG_PARAMS
