@@ -956,3 +956,106 @@ generate_composite_function \
 
 /******************************************************************************/
 
+.macro in_reverse_8888_8888_init
+        /* Hold loop invariant in MASK */
+        ldr     MASK, =0x00800080
+        /* Set GE[3:0] to 0101 so SEL instructions do what we want */
+        uadd8   SCRATCH, MASK, MASK
+        /* Offset the source pointer: we only need the alpha bytes */
+        add     SRC, SRC, #3
+        line_saved_regs  ORIG_W
+.endm
+
+.macro in_reverse_8888_8888_head  numbytes, reg1, reg2, reg3
+        ldrb    ORIG_W, [SRC], #4
+ .if numbytes >= 8
+        ldrb    WK&reg1, [SRC], #4
+  .if numbytes == 16
+        ldrb    WK&reg2, [SRC], #4
+        ldrb    WK&reg3, [SRC], #4
+  .endif
+ .endif
+        add     DST, DST, #numbytes
+.endm
+
+.macro in_reverse_8888_8888_process_head  cond, numbytes, firstreg, unaligned_src, unaligned_mask, preload
+        in_reverse_8888_8888_head  numbytes, firstreg, %(firstreg+1), %(firstreg+2)
+.endm
+
+.macro in_reverse_8888_8888_1pixel  s, d, offset, is_only
+ .if is_only != 1
+        movs    s, ORIG_W
+  .if offset != 0
+        ldrb    ORIG_W, [SRC, #offset]
+  .endif
+        beq     01f
+        teq     STRIDE_M, #0xFF
+        beq     02f
+ .endif
+        uxtb16  SCRATCH, d                 /* rb_dest */
+        uxtb16  d, d, ror #8               /* ag_dest */
+        mla     SCRATCH, SCRATCH, s, MASK
+        mla     d, d, s, MASK
+        uxtab16 SCRATCH, SCRATCH, SCRATCH, ror #8
+        uxtab16 d, d, d, ror #8
+        mov     SCRATCH, SCRATCH, ror #8
+        sel     d, SCRATCH, d
+        b       02f
+ .if offset == 0
+48:     /* Last mov d,#0 of the set - used as part of shortcut for
+         * source values all 0 */
+ .endif
+01:     mov     d, #0
+02:
+.endm
+
+.macro in_reverse_8888_8888_tail  numbytes, reg1, reg2, reg3, reg4
+ .if numbytes == 4
+        teq     ORIG_W, ORIG_W, asr #32
+        ldrne   WK&reg1, [DST, #-4]
+ .elseif numbytes == 8
+        teq     ORIG_W, WK&reg1
+        teqeq   ORIG_W, ORIG_W, asr #32  /* all 0 or all -1? */
+        ldmnedb DST, {WK&reg1-WK&reg2}
+ .else
+        teq     ORIG_W, WK&reg1
+        teqeq   ORIG_W, WK&reg2
+        teqeq   ORIG_W, WK&reg3
+        teqeq   ORIG_W, ORIG_W, asr #32  /* all 0 or all -1? */
+        ldmnedb DST, {WK&reg1-WK&reg4}
+ .endif
+        cmnne   DST, #0   /* clear C if NE */
+        bcs     49f       /* no writes to dest if source all -1 */
+        beq     48f       /* set dest to all 0 if source all 0 */
+ .if numbytes == 4
+        in_reverse_8888_8888_1pixel  ORIG_W, WK&reg1, 0, 1
+        str     WK&reg1, [DST, #-4]
+ .elseif numbytes == 8
+        in_reverse_8888_8888_1pixel  STRIDE_M, WK&reg1, -4, 0
+        in_reverse_8888_8888_1pixel  STRIDE_M, WK&reg2, 0, 0
+        stmdb   DST, {WK&reg1-WK&reg2}
+ .else
+        in_reverse_8888_8888_1pixel  STRIDE_M, WK&reg1, -12, 0
+        in_reverse_8888_8888_1pixel  STRIDE_M, WK&reg2, -8, 0
+        in_reverse_8888_8888_1pixel  STRIDE_M, WK&reg3, -4, 0
+        in_reverse_8888_8888_1pixel  STRIDE_M, WK&reg4, 0, 0
+        stmdb   DST, {WK&reg1-WK&reg4}
+ .endif
+49:
+.endm
+
+.macro in_reverse_8888_8888_process_tail  cond, numbytes, firstreg
+        in_reverse_8888_8888_tail  numbytes, firstreg, %(firstreg+1), %(firstreg+2), %(firstreg+3)
+.endm
+
+generate_composite_function \
+    pixman_composite_in_reverse_8888_8888_asm_armv6, 32, 0, 32 \
+    FLAG_DST_READWRITE | FLAG_BRANCH_OVER | FLAG_PROCESS_CORRUPTS_PSR | FLAG_PROCESS_DOES_STORE | FLAG_SPILL_LINE_VARS | FLAG_PROCESS_CORRUPTS_SCRATCH | FLAG_NO_PRELOAD_DST \
+    2, /* prefetch distance */ \
+    in_reverse_8888_8888_init, \
+    nop_macro, /* newline */ \
+    nop_macro, /* cleanup */ \
+    in_reverse_8888_8888_process_head, \
+    in_reverse_8888_8888_process_tail
+
+/******************************************************************************/
