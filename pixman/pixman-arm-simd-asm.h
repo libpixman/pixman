@@ -596,13 +596,7 @@
                                    process_tail, \
                                    process_inner_loop
 
- .func fname
- .global fname
- /* For ELF format also set function visibility to hidden */
-#ifdef __ELF__
- .hidden fname
- .type fname, %function
-#endif
+    pixman_asm_function fname
 
 /*
  * Make some macro arguments globally visible and accessible
@@ -714,7 +708,6 @@
     SCRATCH     .req    r12
     ORIG_W      .req    r14 /* width (pixels) */
 
-fname:
         push    {r4-r11, lr}        /* save all registers */
 
         subs    Y, Y, #1
