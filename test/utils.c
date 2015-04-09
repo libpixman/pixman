@@ -949,64 +949,87 @@ initialize_palette (pixman_indexed_t *palette, uint32_t depth, int is_rgb)
     }
 }
 
-static const pixman_op_t op_list[] =
+struct operator_entry {
+    pixman_op_t		 op;
+    const char		*name;
+    pixman_bool_t	 is_alias;
+};
+
+typedef struct operator_entry operator_entry_t;
+
+static const operator_entry_t op_list[] =
 {
-    PIXMAN_OP_CLEAR,
-    PIXMAN_OP_SRC,
-    PIXMAN_OP_DST,
-    PIXMAN_OP_OVER,
-    PIXMAN_OP_OVER_REVERSE,
-    PIXMAN_OP_IN,
-    PIXMAN_OP_IN_REVERSE,
-    PIXMAN_OP_OUT,
-    PIXMAN_OP_OUT_REVERSE,
-    PIXMAN_OP_ATOP,
-    PIXMAN_OP_ATOP_REVERSE,
-    PIXMAN_OP_XOR,
-    PIXMAN_OP_ADD,
-    PIXMAN_OP_SATURATE,
+#define ENTRY(op)							\
+    { PIXMAN_OP_##op, "PIXMAN_OP_" #op, FALSE }
+#define ALIAS(op, nam)							\
+    { PIXMAN_OP_##op, nam, TRUE }
 
-    PIXMAN_OP_DISJOINT_CLEAR,
-    PIXMAN_OP_DISJOINT_SRC,
-    PIXMAN_OP_DISJOINT_DST,
-    PIXMAN_OP_DISJOINT_OVER,
-    PIXMAN_OP_DISJOINT_OVER_REVERSE,
-    PIXMAN_OP_DISJOINT_IN,
-    PIXMAN_OP_DISJOINT_IN_REVERSE,
-    PIXMAN_OP_DISJOINT_OUT,
-    PIXMAN_OP_DISJOINT_OUT_REVERSE,
-    PIXMAN_OP_DISJOINT_ATOP,
-    PIXMAN_OP_DISJOINT_ATOP_REVERSE,
-    PIXMAN_OP_DISJOINT_XOR,
+    /* operator_name () will return the first hit in this table,
+     * so keep the list properly ordered between entries and aliases.
+     * Aliases are not listed by list_operators ().
+     */
 
-    PIXMAN_OP_CONJOINT_CLEAR,
-    PIXMAN_OP_CONJOINT_SRC,
-    PIXMAN_OP_CONJOINT_DST,
-    PIXMAN_OP_CONJOINT_OVER,
-    PIXMAN_OP_CONJOINT_OVER_REVERSE,
-    PIXMAN_OP_CONJOINT_IN,
-    PIXMAN_OP_CONJOINT_IN_REVERSE,
-    PIXMAN_OP_CONJOINT_OUT,
-    PIXMAN_OP_CONJOINT_OUT_REVERSE,
-    PIXMAN_OP_CONJOINT_ATOP,
-    PIXMAN_OP_CONJOINT_ATOP_REVERSE,
-    PIXMAN_OP_CONJOINT_XOR,
+    ENTRY (CLEAR),
+    ENTRY (SRC),
+    ENTRY (DST),
+    ENTRY (OVER),
+    ENTRY (OVER_REVERSE),
+    ENTRY (IN),
+    ENTRY (IN_REVERSE),
+    ENTRY (OUT),
+    ENTRY (OUT_REVERSE),
+    ENTRY (ATOP),
+    ENTRY (ATOP_REVERSE),
+    ENTRY (XOR),
+    ENTRY (ADD),
+    ENTRY (SATURATE),
 
-    PIXMAN_OP_MULTIPLY,
-    PIXMAN_OP_SCREEN,
-    PIXMAN_OP_OVERLAY,
-    PIXMAN_OP_DARKEN,
-    PIXMAN_OP_LIGHTEN,
-    PIXMAN_OP_COLOR_DODGE,
-    PIXMAN_OP_COLOR_BURN,
-    PIXMAN_OP_HARD_LIGHT,
-    PIXMAN_OP_SOFT_LIGHT,
-    PIXMAN_OP_DIFFERENCE,
-    PIXMAN_OP_EXCLUSION,
-    PIXMAN_OP_HSL_HUE,
-    PIXMAN_OP_HSL_SATURATION,
-    PIXMAN_OP_HSL_COLOR,
-    PIXMAN_OP_HSL_LUMINOSITY
+    ENTRY (DISJOINT_CLEAR),
+    ENTRY (DISJOINT_SRC),
+    ENTRY (DISJOINT_DST),
+    ENTRY (DISJOINT_OVER),
+    ENTRY (DISJOINT_OVER_REVERSE),
+    ENTRY (DISJOINT_IN),
+    ENTRY (DISJOINT_IN_REVERSE),
+    ENTRY (DISJOINT_OUT),
+    ENTRY (DISJOINT_OUT_REVERSE),
+    ENTRY (DISJOINT_ATOP),
+    ENTRY (DISJOINT_ATOP_REVERSE),
+    ENTRY (DISJOINT_XOR),
+
+    ENTRY (CONJOINT_CLEAR),
+    ENTRY (CONJOINT_SRC),
+    ENTRY (CONJOINT_DST),
+    ENTRY (CONJOINT_OVER),
+    ENTRY (CONJOINT_OVER_REVERSE),
+    ENTRY (CONJOINT_IN),
+    ENTRY (CONJOINT_IN_REVERSE),
+    ENTRY (CONJOINT_OUT),
+    ENTRY (CONJOINT_OUT_REVERSE),
+    ENTRY (CONJOINT_ATOP),
+    ENTRY (CONJOINT_ATOP_REVERSE),
+    ENTRY (CONJOINT_XOR),
+
+    ENTRY (MULTIPLY),
+    ENTRY (SCREEN),
+    ENTRY (OVERLAY),
+    ENTRY (DARKEN),
+    ENTRY (LIGHTEN),
+    ENTRY (COLOR_DODGE),
+    ENTRY (COLOR_BURN),
+    ENTRY (HARD_LIGHT),
+    ENTRY (SOFT_LIGHT),
+    ENTRY (DIFFERENCE),
+    ENTRY (EXCLUSION),
+    ENTRY (HSL_HUE),
+    ENTRY (HSL_SATURATION),
+    ENTRY (HSL_COLOR),
+    ENTRY (HSL_LUMINOSITY),
+
+    ALIAS (NONE, "<invalid operator 'none'>")
+
+#undef ENTRY
+#undef ALIAS
 };
 
 static const pixman_format_code_t format_list[] =
@@ -1107,11 +1130,14 @@ list_operators (void)
     n_chars = 0;
     for (i = 0; i < ARRAY_LENGTH (op_list); ++i)
     {
-        pixman_op_t op = op_list[i];
+        const operator_entry_t *ent = &op_list[i];
         int j;
 
+        if (ent->is_alias)
+            continue;
+
         snprintf (short_name, sizeof (short_name) - 1, "%s",
-                  operator_name (op) + strlen ("PIXMAN_OP_"));
+                  ent->name + strlen ("PIXMAN_OP_"));
 
         for (j = 0; short_name[j] != '\0'; ++j)
             short_name[j] = tolower (short_name[j]);
@@ -1125,17 +1151,22 @@ list_operators (void)
 pixman_op_t
 operator_from_string (const char *s)
 {
-    char full_name[128] = { 0 };
     int i;
-
-    snprintf (full_name, (sizeof full_name) - 1, "PIXMAN_OP_%s", s);
 
     for (i = 0; i < ARRAY_LENGTH (op_list); ++i)
     {
-        pixman_op_t op = op_list[i];
+        const operator_entry_t *ent = &op_list[i];
 
-        if (strcasecmp (operator_name (op), full_name) == 0)
-            return op;
+        if (ent->is_alias)
+        {
+            if (strcasecmp (ent->name, s) == 0)
+                return ent->op;
+        }
+        else
+        {
+            if (strcasecmp (ent->name + strlen ("PIXMAN_OP_"), s) == 0)
+                return ent->op;
+        }
     }
 
     return PIXMAN_OP_NONE;
@@ -1144,68 +1175,15 @@ operator_from_string (const char *s)
 const char *
 operator_name (pixman_op_t op)
 {
-    switch (op)
+    int i;
+
+    for (i = 0; i < ARRAY_LENGTH (op_list); ++i)
     {
-    case PIXMAN_OP_CLEAR: return "PIXMAN_OP_CLEAR";
-    case PIXMAN_OP_SRC: return "PIXMAN_OP_SRC";
-    case PIXMAN_OP_DST: return "PIXMAN_OP_DST";
-    case PIXMAN_OP_OVER: return "PIXMAN_OP_OVER";
-    case PIXMAN_OP_OVER_REVERSE: return "PIXMAN_OP_OVER_REVERSE";
-    case PIXMAN_OP_IN: return "PIXMAN_OP_IN";
-    case PIXMAN_OP_IN_REVERSE: return "PIXMAN_OP_IN_REVERSE";
-    case PIXMAN_OP_OUT: return "PIXMAN_OP_OUT";
-    case PIXMAN_OP_OUT_REVERSE: return "PIXMAN_OP_OUT_REVERSE";
-    case PIXMAN_OP_ATOP: return "PIXMAN_OP_ATOP";
-    case PIXMAN_OP_ATOP_REVERSE: return "PIXMAN_OP_ATOP_REVERSE";
-    case PIXMAN_OP_XOR: return "PIXMAN_OP_XOR";
-    case PIXMAN_OP_ADD: return "PIXMAN_OP_ADD";
-    case PIXMAN_OP_SATURATE: return "PIXMAN_OP_SATURATE";
+        const operator_entry_t *ent = &op_list[i];
 
-    case PIXMAN_OP_DISJOINT_CLEAR: return "PIXMAN_OP_DISJOINT_CLEAR";
-    case PIXMAN_OP_DISJOINT_SRC: return "PIXMAN_OP_DISJOINT_SRC";
-    case PIXMAN_OP_DISJOINT_DST: return "PIXMAN_OP_DISJOINT_DST";
-    case PIXMAN_OP_DISJOINT_OVER: return "PIXMAN_OP_DISJOINT_OVER";
-    case PIXMAN_OP_DISJOINT_OVER_REVERSE: return "PIXMAN_OP_DISJOINT_OVER_REVERSE";
-    case PIXMAN_OP_DISJOINT_IN: return "PIXMAN_OP_DISJOINT_IN";
-    case PIXMAN_OP_DISJOINT_IN_REVERSE: return "PIXMAN_OP_DISJOINT_IN_REVERSE";
-    case PIXMAN_OP_DISJOINT_OUT: return "PIXMAN_OP_DISJOINT_OUT";
-    case PIXMAN_OP_DISJOINT_OUT_REVERSE: return "PIXMAN_OP_DISJOINT_OUT_REVERSE";
-    case PIXMAN_OP_DISJOINT_ATOP: return "PIXMAN_OP_DISJOINT_ATOP";
-    case PIXMAN_OP_DISJOINT_ATOP_REVERSE: return "PIXMAN_OP_DISJOINT_ATOP_REVERSE";
-    case PIXMAN_OP_DISJOINT_XOR: return "PIXMAN_OP_DISJOINT_XOR";
-
-    case PIXMAN_OP_CONJOINT_CLEAR: return "PIXMAN_OP_CONJOINT_CLEAR";
-    case PIXMAN_OP_CONJOINT_SRC: return "PIXMAN_OP_CONJOINT_SRC";
-    case PIXMAN_OP_CONJOINT_DST: return "PIXMAN_OP_CONJOINT_DST";
-    case PIXMAN_OP_CONJOINT_OVER: return "PIXMAN_OP_CONJOINT_OVER";
-    case PIXMAN_OP_CONJOINT_OVER_REVERSE: return "PIXMAN_OP_CONJOINT_OVER_REVERSE";
-    case PIXMAN_OP_CONJOINT_IN: return "PIXMAN_OP_CONJOINT_IN";
-    case PIXMAN_OP_CONJOINT_IN_REVERSE: return "PIXMAN_OP_CONJOINT_IN_REVERSE";
-    case PIXMAN_OP_CONJOINT_OUT: return "PIXMAN_OP_CONJOINT_OUT";
-    case PIXMAN_OP_CONJOINT_OUT_REVERSE: return "PIXMAN_OP_CONJOINT_OUT_REVERSE";
-    case PIXMAN_OP_CONJOINT_ATOP: return "PIXMAN_OP_CONJOINT_ATOP";
-    case PIXMAN_OP_CONJOINT_ATOP_REVERSE: return "PIXMAN_OP_CONJOINT_ATOP_REVERSE";
-    case PIXMAN_OP_CONJOINT_XOR: return "PIXMAN_OP_CONJOINT_XOR";
-
-    case PIXMAN_OP_MULTIPLY: return "PIXMAN_OP_MULTIPLY";
-    case PIXMAN_OP_SCREEN: return "PIXMAN_OP_SCREEN";
-    case PIXMAN_OP_OVERLAY: return "PIXMAN_OP_OVERLAY";
-    case PIXMAN_OP_DARKEN: return "PIXMAN_OP_DARKEN";
-    case PIXMAN_OP_LIGHTEN: return "PIXMAN_OP_LIGHTEN";
-    case PIXMAN_OP_COLOR_DODGE: return "PIXMAN_OP_COLOR_DODGE";
-    case PIXMAN_OP_COLOR_BURN: return "PIXMAN_OP_COLOR_BURN";
-    case PIXMAN_OP_HARD_LIGHT: return "PIXMAN_OP_HARD_LIGHT";
-    case PIXMAN_OP_SOFT_LIGHT: return "PIXMAN_OP_SOFT_LIGHT";
-    case PIXMAN_OP_DIFFERENCE: return "PIXMAN_OP_DIFFERENCE";
-    case PIXMAN_OP_EXCLUSION: return "PIXMAN_OP_EXCLUSION";
-    case PIXMAN_OP_HSL_HUE: return "PIXMAN_OP_HSL_HUE";
-    case PIXMAN_OP_HSL_SATURATION: return "PIXMAN_OP_HSL_SATURATION";
-    case PIXMAN_OP_HSL_COLOR: return "PIXMAN_OP_HSL_COLOR";
-    case PIXMAN_OP_HSL_LUMINOSITY: return "PIXMAN_OP_HSL_LUMINOSITY";
-
-    case PIXMAN_OP_NONE:
-	return "<invalid operator 'none'>";
-    };
+        if (ent->op == op)
+            return ent->name;
+    }
 
     return "<unknown operator>";
 }
