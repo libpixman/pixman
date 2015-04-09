@@ -1032,46 +1032,113 @@ static const operator_entry_t op_list[] =
 #undef ALIAS
 };
 
-static const pixman_format_code_t format_list[] =
+struct format_entry
 {
-    PIXMAN_a8r8g8b8,
-    PIXMAN_x8r8g8b8,
-    PIXMAN_a8b8g8r8,
-    PIXMAN_x8b8g8r8,
-    PIXMAN_b8g8r8a8,
-    PIXMAN_b8g8r8x8,
-    PIXMAN_r8g8b8a8,
-    PIXMAN_r8g8b8x8,
-    PIXMAN_x14r6g6b6,
-    PIXMAN_x2r10g10b10,
-    PIXMAN_a2r10g10b10,
-    PIXMAN_x2b10g10r10,
-    PIXMAN_a2b10g10r10,
-    PIXMAN_a8r8g8b8_sRGB,
-    PIXMAN_r8g8b8,
-    PIXMAN_b8g8r8,
-    PIXMAN_r5g6b5,
-    PIXMAN_b5g6r5,
-    PIXMAN_a1r5g5b5,
-    PIXMAN_x1r5g5b5,
-    PIXMAN_a1b5g5r5,
-    PIXMAN_x1b5g5r5,
-    PIXMAN_a4r4g4b4,
-    PIXMAN_x4r4g4b4,
-    PIXMAN_a4b4g4r4,
-    PIXMAN_x4b4g4r4,
-    PIXMAN_a8,
-    PIXMAN_r3g3b2,
-    PIXMAN_b2g3r3,
-    PIXMAN_a2r2g2b2,
-    PIXMAN_a2b2g2r2,
-    PIXMAN_x4a4,
-    PIXMAN_a4,
-    PIXMAN_r1g2b1,
-    PIXMAN_b1g2r1,
-    PIXMAN_a1r1g1b1,
-    PIXMAN_a1b1g1r1,
-    PIXMAN_a1,
+    pixman_format_code_t format;
+    const char		*name;
+    pixman_bool_t	 is_alias;
+};
+
+typedef struct format_entry format_entry_t;
+
+static const format_entry_t format_list[] =
+{
+#define ENTRY(f)							\
+    { PIXMAN_##f, #f, FALSE }
+#define ALIAS(f, nam)							\
+    { PIXMAN_##f, nam, TRUE }
+
+    /* format_name () will return the first hit in this table,
+     * so keep the list properly ordered between entries and aliases.
+     * Aliases are not listed by list_formats ().
+     */
+
+/* 32bpp formats */
+    ENTRY (a8r8g8b8),
+    ENTRY (x8r8g8b8),
+    ENTRY (a8b8g8r8),
+    ENTRY (x8b8g8r8),
+    ENTRY (b8g8r8a8),
+    ENTRY (b8g8r8x8),
+    ENTRY (r8g8b8a8),
+    ENTRY (r8g8b8x8),
+    ENTRY (x14r6g6b6),
+    ENTRY (x2r10g10b10),
+    ENTRY (a2r10g10b10),
+    ENTRY (x2b10g10r10),
+    ENTRY (a2b10g10r10),
+
+/* sRGB formats */
+    ENTRY (a8r8g8b8_sRGB),
+
+/* 24bpp formats */
+    ENTRY (r8g8b8),
+    ENTRY (b8g8r8),
+
+/* 16 bpp formats */
+    ENTRY (r5g6b5),
+    ENTRY (b5g6r5),
+
+    ENTRY (a1r5g5b5),
+    ENTRY (x1r5g5b5),
+    ENTRY (a1b5g5r5),
+    ENTRY (x1b5g5r5),
+    ENTRY (a4r4g4b4),
+    ENTRY (x4r4g4b4),
+    ENTRY (a4b4g4r4),
+    ENTRY (x4b4g4r4),
+
+/* 8bpp formats */
+    ENTRY (a8),
+    ENTRY (r3g3b2),
+    ENTRY (b2g3r3),
+    ENTRY (a2r2g2b2),
+    ENTRY (a2b2g2r2),
+
+    ALIAS (c8,			"x4c4 / c8"),
+    /* ENTRY (c8), */
+    ALIAS (g8,			"x4g4 / g8"),
+    /* ENTRY (g8), */
+
+    ENTRY (x4a4),
+
+    /* These format codes are identical to c8 and g8, respectively. */
+    /* ENTRY (x4c4), */
+    /* ENTRY (x4g4), */
+
+/* 4 bpp formats */
+    ENTRY (a4),
+    ENTRY (r1g2b1),
+    ENTRY (b1g2r1),
+    ENTRY (a1r1g1b1),
+    ENTRY (a1b1g1r1),
+
+    ALIAS (c4,			"c4"),
+    /* ENTRY (c4), */
+    ALIAS (g4,			"g4"),
+    /* ENTRY (g4), */
+
+/* 1bpp formats */
+    ENTRY (a1),
+
+    ALIAS (g1,			"g1"),
+    /* ENTRY (g1), */
+
+/* YUV formats */
+    ALIAS (yuy2,		"yuy2"),
+    /* ENTRY (yuy2), */
+    ALIAS (yv12,		"yv12"),
+    /* ENTRY (yv12), */
+
+/* Fake formats, not in pixman_format_code_t enum */
+    ALIAS (null,		"null"),
+    ALIAS (solid,		"solid"),
+    ALIAS (pixbuf,		"pixbuf"),
+    ALIAS (rpixbuf,		"rpixbuf"),
+    ALIAS (unknown,		"unknown"),
+
+#undef ENTRY
+#undef ALIAS
 };
 
 pixman_format_code_t
@@ -1081,8 +1148,10 @@ format_from_string (const char *s)
 
     for (i = 0; i < ARRAY_LENGTH (format_list); ++i)
     {
-        if (strcasecmp (format_name (format_list[i]), s) == 0)
-            return format_list[i];
+        const format_entry_t *ent = &format_list[i];
+
+        if (strcasecmp (ent->name, s) == 0)
+            return ent->format;
     }
 
     return PIXMAN_null;
@@ -1114,7 +1183,14 @@ list_formats (void)
 
     n_chars = 0;
     for (i = 0; i < ARRAY_LENGTH (format_list); ++i)
-        emit (format_name (format_list[i]), &n_chars);
+    {
+        const format_entry_t *ent = &format_list[i];
+
+        if (ent->is_alias)
+            continue;
+
+        emit (ent->name, &n_chars);
+    }
 
     printf ("\n\n");
 }
@@ -1191,92 +1267,15 @@ operator_name (pixman_op_t op)
 const char *
 format_name (pixman_format_code_t format)
 {
-    switch (format)
+    int i;
+
+    for (i = 0; i < ARRAY_LENGTH (format_list); ++i)
     {
-/* 32bpp formats */
-    case PIXMAN_a8r8g8b8: return "a8r8g8b8";
-    case PIXMAN_x8r8g8b8: return "x8r8g8b8";
-    case PIXMAN_a8b8g8r8: return "a8b8g8r8";
-    case PIXMAN_x8b8g8r8: return "x8b8g8r8";
-    case PIXMAN_b8g8r8a8: return "b8g8r8a8";
-    case PIXMAN_b8g8r8x8: return "b8g8r8x8";
-    case PIXMAN_r8g8b8a8: return "r8g8b8a8";
-    case PIXMAN_r8g8b8x8: return "r8g8b8x8";
-    case PIXMAN_x14r6g6b6: return "x14r6g6b6";
-    case PIXMAN_x2r10g10b10: return "x2r10g10b10";
-    case PIXMAN_a2r10g10b10: return "a2r10g10b10";
-    case PIXMAN_x2b10g10r10: return "x2b10g10r10";
-    case PIXMAN_a2b10g10r10: return "a2b10g10r10";
+        const format_entry_t *ent = &format_list[i];
 
-/* sRGB formats */
-    case PIXMAN_a8r8g8b8_sRGB: return "a8r8g8b8_sRGB";
-
-/* 24bpp formats */
-    case PIXMAN_r8g8b8: return "r8g8b8";
-    case PIXMAN_b8g8r8: return "b8g8r8";
-
-/* 16bpp formats */
-    case PIXMAN_r5g6b5: return "r5g6b5";
-    case PIXMAN_b5g6r5: return "b5g6r5";
-
-    case PIXMAN_a1r5g5b5: return "a1r5g5b5";
-    case PIXMAN_x1r5g5b5: return "x1r5g5b5";
-    case PIXMAN_a1b5g5r5: return "a1b5g5r5";
-    case PIXMAN_x1b5g5r5: return "x1b5g5r5";
-    case PIXMAN_a4r4g4b4: return "a4r4g4b4";
-    case PIXMAN_x4r4g4b4: return "x4r4g4b4";
-    case PIXMAN_a4b4g4r4: return "a4b4g4r4";
-    case PIXMAN_x4b4g4r4: return "x4b4g4r4";
-
-/* 8bpp formats */
-    case PIXMAN_a8: return "a8";
-    case PIXMAN_r3g3b2: return "r3g3b2";
-    case PIXMAN_b2g3r3: return "b2g3r3";
-    case PIXMAN_a2r2g2b2: return "a2r2g2b2";
-    case PIXMAN_a2b2g2r2: return "a2b2g2r2";
-
-#if 0
-    case PIXMAN_x4c4: return "x4c4";
-    case PIXMAN_g8: return "g8";
-#endif
-    case PIXMAN_c8: return "x4c4 / c8";
-    case PIXMAN_x4g4: return "x4g4 / g8";
-
-    case PIXMAN_x4a4: return "x4a4";
-
-/* 4bpp formats */
-    case PIXMAN_a4: return "a4";
-    case PIXMAN_r1g2b1: return "r1g2b1";
-    case PIXMAN_b1g2r1: return "b1g2r1";
-    case PIXMAN_a1r1g1b1: return "a1r1g1b1";
-    case PIXMAN_a1b1g1r1: return "a1b1g1r1";
-
-    case PIXMAN_c4: return "c4";
-    case PIXMAN_g4: return "g4";
-
-/* 1bpp formats */
-    case PIXMAN_a1: return "a1";
-
-    case PIXMAN_g1: return "g1";
-
-/* YUV formats */
-    case PIXMAN_yuy2: return "yuy2";
-    case PIXMAN_yv12: return "yv12";
-    };
-
-    /* Fake formats.
-     *
-     * This is separate switch to prevent GCC from complaining
-     * that the values are not in the pixman_format_code_t enum.
-     */
-    switch ((uint32_t)format)
-    {
-    case PIXMAN_null: return "null"; 
-    case PIXMAN_solid: return "solid"; 
-    case PIXMAN_pixbuf: return "pixbuf"; 
-    case PIXMAN_rpixbuf: return "rpixbuf"; 
-    case PIXMAN_unknown: return "unknown"; 
-    };
+        if (ent->format == format)
+            return ent->name;
+    }
 
     return "<unknown format>";
 };
