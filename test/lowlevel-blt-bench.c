@@ -367,14 +367,14 @@ bench_RT (pixman_op_t              op,
 }
 
 void
-bench_composite (char * testname,
-                 int    src_fmt,
-                 int    src_flags,
-                 int    op,
-                 int    mask_fmt,
-                 int    mask_flags,
-                 int    dst_fmt,
-                 double npix)
+bench_composite (const char *testname,
+                 int         src_fmt,
+                 int         src_flags,
+                 int         op,
+                 int         mask_fmt,
+                 int         mask_flags,
+                 int         dst_fmt,
+                 double      npix)
 {
     pixman_image_t *                src_img;
     pixman_image_t *                dst_img;
@@ -942,6 +942,36 @@ parser_self_test (void)
     printf ("Parser self-test complete.\n");
 }
 
+static void
+run_one_test (const char *pattern, double bandwidth_)
+{
+    test_entry_t test;
+
+    if (parse_test_pattern (&test, pattern) < 0)
+    {
+        printf ("Error: Could not parse the test pattern '%s'.\n", pattern);
+        return;
+    }
+
+    bench_composite (pattern,
+                     test.src_fmt,
+                     test.src_flags,
+                     test.op,
+                     test.mask_fmt,
+                     test.mask_flags,
+                     test.dst_fmt,
+                     bandwidth_ / 8);
+}
+
+static void
+run_default_tests (double bandwidth_)
+{
+    int i;
+
+    for (i = 0; i < ARRAY_LENGTH (tests_tbl); i++)
+        run_one_test (tests_tbl[i].testname, bandwidth_);
+}
+
 int
 main (int argc, char *argv[])
 {
@@ -1026,19 +1056,13 @@ main (int argc, char *argv[])
     }
     printf ("---\n");
 
-    for (i = 0; i < ARRAY_LENGTH (tests_tbl); i++)
+    if (strcmp (pattern, "all") == 0)
     {
-	if (strcmp (pattern, "all") == 0 || strcmp (tests_tbl[i].testname, pattern) == 0)
-	{
-	    bench_composite (tests_tbl[i].testname,
-			     tests_tbl[i].src_fmt,
-			     tests_tbl[i].src_flags,
-			     tests_tbl[i].op,
-			     tests_tbl[i].mask_fmt,
-			     tests_tbl[i].mask_flags,
-			     tests_tbl[i].dst_fmt,
-			     bandwidth/8);
-	}
+        run_default_tests (bandwidth);
+    }
+    else
+    {
+        run_one_test (pattern, bandwidth);
     }
 
     free (src);
