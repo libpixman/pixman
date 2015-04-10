@@ -1059,7 +1059,9 @@ static const format_entry_t format_list[] =
 
 /* 32bpp formats */
     ENTRY (a8r8g8b8),
+    ALIAS (a8r8g8b8,		"8888"),
     ENTRY (x8r8g8b8),
+    ALIAS (x8r8g8b8,		"x888"),
     ENTRY (a8b8g8r8),
     ENTRY (x8b8g8r8),
     ENTRY (b8g8r8a8),
@@ -1068,7 +1070,9 @@ static const format_entry_t format_list[] =
     ENTRY (r8g8b8x8),
     ENTRY (x14r6g6b6),
     ENTRY (x2r10g10b10),
+    ALIAS (x2r10g10b10,		"2x10"),
     ENTRY (a2r10g10b10),
+    ALIAS (a2r10g10b10,		"2a10"),
     ENTRY (x2b10g10r10),
     ENTRY (a2b10g10r10),
 
@@ -1077,26 +1081,32 @@ static const format_entry_t format_list[] =
 
 /* 24bpp formats */
     ENTRY (r8g8b8),
+    ALIAS (r8g8b8,		"0888"),
     ENTRY (b8g8r8),
 
 /* 16 bpp formats */
     ENTRY (r5g6b5),
+    ALIAS (r5g6b5,		"0565"),
     ENTRY (b5g6r5),
 
     ENTRY (a1r5g5b5),
+    ALIAS (a1r5g5b5,		"1555"),
     ENTRY (x1r5g5b5),
     ENTRY (a1b5g5r5),
     ENTRY (x1b5g5r5),
     ENTRY (a4r4g4b4),
+    ALIAS (a4r4g4b4,		"4444"),
     ENTRY (x4r4g4b4),
     ENTRY (a4b4g4r4),
     ENTRY (x4b4g4r4),
 
 /* 8bpp formats */
     ENTRY (a8),
+    ALIAS (a8,			"8"),
     ENTRY (r3g3b2),
     ENTRY (b2g3r3),
     ENTRY (a2r2g2b2),
+    ALIAS (a2r2g2b2,		"2222"),
     ENTRY (a2b2g2r2),
 
     ALIAS (c8,			"x4c4 / c8"),
@@ -1137,6 +1147,7 @@ static const format_entry_t format_list[] =
 /* Fake formats, not in pixman_format_code_t enum */
     ALIAS (null,		"null"),
     ALIAS (solid,		"solid"),
+    ALIAS (solid,		"n"),
     ALIAS (pixbuf,		"pixbuf"),
     ALIAS (rpixbuf,		"rpixbuf"),
     ALIAS (unknown,		"unknown"),
