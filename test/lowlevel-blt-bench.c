@@ -868,7 +868,11 @@ parse_test_pattern (test_entry_t *test, const char *pattern)
 
     if (test->mask_fmt == PIXMAN_solid)
     {
-        test->mask_fmt = PIXMAN_a8;
+        if (test->mask_flags & CA_FLAG)
+            test->mask_fmt = PIXMAN_a8r8g8b8;
+        else
+            test->mask_fmt = PIXMAN_a8;
+
         test->mask_flags |= SOLID_FLAG;
     }
 
