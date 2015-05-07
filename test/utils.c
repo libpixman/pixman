@@ -377,7 +377,7 @@ typedef struct
     int n_bytes;
 } info_t;
 
-#if defined(HAVE_MPROTECT) && defined(HAVE_GETPAGESIZE) && defined(HAVE_SYS_MMAN_H) && defined(HAVE_MMAP)
+#if FENCE_MALLOC_ACTIVE
 
 /* This is apparently necessary on at least OS X */
 #ifndef MAP_ANONYMOUS
@@ -445,7 +445,7 @@ fence_free (void *data)
     munmap (info->addr, info->n_bytes);
 }
 
-#else
+#else /* FENCE_MALLOC_ACTIVE */
 
 void *
 fence_malloc (int64_t len)
@@ -459,7 +459,7 @@ fence_free (void *data)
     free (data);
 }
 
-#endif
+#endif /* FENCE_MALLOC_ACTIVE */
 
 uint8_t *
 make_random_bytes (int n_bytes)

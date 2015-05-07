@@ -86,6 +86,17 @@ is_little_endian (void)
 void
 image_endian_swap (pixman_image_t *img);
 
+#if defined (HAVE_MPROTECT) && defined (HAVE_GETPAGESIZE) && \
+    defined (HAVE_SYS_MMAN_H) && defined (HAVE_MMAP)
+/* fence_malloc and friends have working fence implementation.
+ * Without this, fence_malloc still allocs but does not catch
+ * out-of-bounds accesses.
+ */
+#define FENCE_MALLOC_ACTIVE 1
+#else
+#define FENCE_MALLOC_ACTIVE 0
+#endif
+
 /* Allocate memory that is bounded by protected pages,
  * so that out-of-bounds access will cause segfaults
  */
