@@ -3,6 +3,7 @@ TESTPROGRAMS =			      \
 	oob-test		      \
 	infinite-loop		      \
 	trap-crasher		      \
+	fence-image-self-test	      \
 	region-translate-test	      \
 	fetch-test		      \
 	a1-trap-test		      \
