@@ -6,6 +6,7 @@
 #include <stdlib.h>
 #include <float.h>
 #include <ctype.h>
+#include <limits.h>
 
 #ifdef HAVE_GETTIMEOFDAY
 #include <sys/time.h>
@@ -28,6 +29,8 @@
 #ifdef HAVE_LIBPNG
 #include <png.h>
 #endif
+
+#define ROUND_UP(x, mult) (((x) + (mult) - 1) / (mult) * (mult))
 
 /* Random number generator state
  */
@@ -445,6 +448,97 @@ fence_free (void *data)
     munmap (info->addr, info->n_bytes);
 }
 
+static void
+fence_image_destroy (pixman_image_t *image, void *data)
+{
+    fence_free (data);
+}
+
+/* Create an image with fence pages.
+ *
+ * Creates an image, where the data area is allocated with fence_malloc ().
+ * Each row has an additional page in the stride.
+ *
+ * min_width is only a minimum width for the image. The width is aligned up
+ * for the row size to be divisible by both page size and pixel size.
+ *
+ * If stride_fence is true, the additional page on each row will be armed
+ * to cause SIGSEVG on all accesses. This should catch all accesses outside
+ * the valid row pixels.
+ */
+pixman_image_t *
+fence_image_create_bits (pixman_format_code_t format,
+                         int min_width,
+                         int height,
+                         pixman_bool_t stride_fence)
+{
+    unsigned page_size = getpagesize();
+    unsigned page_mask = page_size - 1;
+    unsigned bitspp = PIXMAN_FORMAT_BPP (format);
+    unsigned bits_boundary;
+    unsigned row_bits;
+    int width;       /* pixels */
+    unsigned stride; /* bytes */
+    void *pixels;
+    pixman_image_t *image;
+    int i;
+
+    /* must be power of two */
+    assert (page_size && (page_size & page_mask) == 0);
+
+    if (bitspp < 1 || min_width < 1 || height < 1)
+        abort ();
+
+    /* least common multiple between page size * 8 and bitspp */
+    bits_boundary = bitspp;
+    while (! (bits_boundary & 1))
+        bits_boundary >>= 1;
+    bits_boundary *= page_size * 8;
+
+    /* round up to bits_boundary */
+    row_bits = ROUND_UP ( (unsigned)min_width * bitspp, bits_boundary);
+    width = row_bits / bitspp;
+
+    stride = row_bits / 8;
+    if (stride_fence)
+        stride += page_size; /* add fence page */
+
+    if (UINT_MAX / stride < (unsigned)height)
+        abort ();
+
+    pixels = fence_malloc (stride * (unsigned)height);
+    if (!pixels)
+        return NULL;
+
+    if (stride_fence)
+    {
+        uint8_t *guard = (uint8_t *)pixels + stride - page_size;
+
+        /* arm row end fence pages */
+        for (i = 0; i < height; i++)
+        {
+            if (mprotect (guard + i * stride, page_size, PROT_NONE) == -1)
+                goto out_fail;
+        }
+    }
+
+    assert (width >= min_width);
+
+    image = pixman_image_create_bits_no_clear (format, width, height,
+                                               pixels, stride);
+    if (!image)
+        goto out_fail;
+
+    pixman_image_set_destroy_function (image, fence_image_destroy, pixels);
+
+    return image;
+
+out_fail:
+    fence_free (pixels);
+
+    return NULL;
+}
+
 #else /* FENCE_MALLOC_ACTIVE */
 
 void *
@@ -457,6 +551,18 @@ void
 fence_free (void *data)
 {
     free (data);
+}
+
+pixman_image_t *
+fence_image_create_bits (pixman_format_code_t format,
+                         int min_width,
+                         int height,
+                         pixman_bool_t stride_fence)
+{
+    return pixman_image_create_bits (format, width, height, NULL, 0);
+    /* Implicitly allocated storage does not need a destroy function
+     * to get freed on refcount hitting zero.
+     */
 }
 
 #endif /* FENCE_MALLOC_ACTIVE */

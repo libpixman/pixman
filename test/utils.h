@@ -106,6 +106,12 @@ fence_malloc (int64_t len);
 void
 fence_free (void *data);
 
+pixman_image_t *
+fence_image_create_bits (pixman_format_code_t format,
+                         int min_width,
+                         int height,
+                         pixman_bool_t stride_fence);
+
 /* Generate n_bytes random bytes in fence_malloced memory */
 uint8_t *
 make_random_bytes (int n_bytes);
