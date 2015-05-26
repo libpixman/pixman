@@ -4103,10 +4103,6 @@ static const pixman_fast_path_t mmx_fast_paths[] =
     SIMPLE_NEAREST_SOLID_MASK_FAST_PATH (OVER, a8b8g8r8, a8b8g8r8, mmx_8888_n_8888                 ),
     SIMPLE_NEAREST_SOLID_MASK_FAST_PATH (OVER, a8r8g8b8, x8r8g8b8, mmx_8888_n_8888                 ),
     SIMPLE_NEAREST_SOLID_MASK_FAST_PATH (OVER, a8b8g8r8, x8b8g8r8, mmx_8888_n_8888                 ),
-    SIMPLE_NEAREST_SOLID_MASK_FAST_PATH_NORMAL (OVER, a8r8g8b8, a8r8g8b8, mmx_8888_n_8888          ),
-    SIMPLE_NEAREST_SOLID_MASK_FAST_PATH_NORMAL (OVER, a8b8g8r8, a8b8g8r8, mmx_8888_n_8888          ),
-    SIMPLE_NEAREST_SOLID_MASK_FAST_PATH_NORMAL (OVER, a8r8g8b8, x8r8g8b8, mmx_8888_n_8888          ),
-    SIMPLE_NEAREST_SOLID_MASK_FAST_PATH_NORMAL (OVER, a8b8g8r8, x8b8g8r8, mmx_8888_n_8888          ),
 
     SIMPLE_BILINEAR_FAST_PATH (SRC, a8r8g8b8,          a8r8g8b8, mmx_8888_8888                     ),
     SIMPLE_BILINEAR_FAST_PATH (SRC, a8r8g8b8,          x8r8g8b8, mmx_8888_8888                     ),
