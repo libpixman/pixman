@@ -977,6 +977,38 @@ run_default_tests (double bandwidth_)
 }
 
 static void
+print_explanation (void)
+{
+    printf ("Benchmark for a set of most commonly used functions\n");
+    printf ("---\n");
+    printf ("All results are presented in millions of pixels per second\n");
+    printf ("L1  - small Xx1 rectangle (fitting L1 cache), always blitted at the same\n");
+    printf ("      memory location with small drift in horizontal direction\n");
+    printf ("L2  - small XxY rectangle (fitting L2 cache), always blitted at the same\n");
+    printf ("      memory location with small drift in horizontal direction\n");
+    printf ("M   - large %dx%d rectangle, always blitted at the same\n",
+            WIDTH - 64, HEIGHT);
+    printf ("      memory location with small drift in horizontal direction\n");
+    printf ("HT  - random rectangles with %dx%d average size are copied from\n",
+            TILEWIDTH, TILEWIDTH);
+    printf ("      one %dx%d buffer to another, traversing from left to right\n",
+            WIDTH, HEIGHT);
+    printf ("      and from top to bottom\n");
+    printf ("VT  - random rectangles with %dx%d average size are copied from\n",
+            TILEWIDTH, TILEWIDTH);
+    printf ("      one %dx%d buffer to another, traversing from top to bottom\n",
+            WIDTH, HEIGHT);
+    printf ("      and from left to right\n");
+    printf ("R   - random rectangles with %dx%d average size are copied from\n",
+            TILEWIDTH, TILEWIDTH);
+    printf ("      random locations of one %dx%d buffer to another\n",
+            WIDTH, HEIGHT);
+    printf ("RT  - as R, but %dx%d average sized rectangles are copied\n",
+            TINYWIDTH, TINYWIDTH);
+    printf ("---\n");
+}
+
+static void
 usage (const char *progname)
 {
     printf ("Usage: %s [-b] [-n] pattern\n", progname);
@@ -1024,33 +1056,7 @@ main (int argc, char *argv[])
     dst = src + (BUFSIZE / 4);
     mask = dst + (BUFSIZE / 4);
 
-    printf ("Benchmark for a set of most commonly used functions\n");
-    printf ("---\n");
-    printf ("All results are presented in millions of pixels per second\n");
-    printf ("L1  - small Xx1 rectangle (fitting L1 cache), always blitted at the same\n");
-    printf ("      memory location with small drift in horizontal direction\n");
-    printf ("L2  - small XxY rectangle (fitting L2 cache), always blitted at the same\n");
-    printf ("      memory location with small drift in horizontal direction\n");
-    printf ("M   - large %dx%d rectangle, always blitted at the same\n",
-            WIDTH - 64, HEIGHT);
-    printf ("      memory location with small drift in horizontal direction\n");
-    printf ("HT  - random rectangles with %dx%d average size are copied from\n",
-            TILEWIDTH, TILEWIDTH);
-    printf ("      one %dx%d buffer to another, traversing from left to right\n",
-            WIDTH, HEIGHT);
-    printf ("      and from top to bottom\n");
-    printf ("VT  - random rectangles with %dx%d average size are copied from\n",
-            TILEWIDTH, TILEWIDTH);
-    printf ("      one %dx%d buffer to another, traversing from top to bottom\n",
-            WIDTH, HEIGHT);
-    printf ("      and from left to right\n");
-    printf ("R   - random rectangles with %dx%d average size are copied from\n",
-            TILEWIDTH, TILEWIDTH);
-    printf ("      random locations of one %dx%d buffer to another\n",
-            WIDTH, HEIGHT);
-    printf ("RT  - as R, but %dx%d average sized rectangles are copied\n",
-            TINYWIDTH, TINYWIDTH);
-    printf ("---\n");
+    print_explanation ();
     bandwidth = x = bench_memcpy ();
     printf ("reference memcpy speed = %.1fMB/s (%.1fMP/s for 32bpp fills)\n",
             x / 1000000., x / 4000000);
