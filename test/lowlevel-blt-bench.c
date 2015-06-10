@@ -1031,6 +1031,26 @@ print_explanation (void)
 }
 
 static void
+print_speed_scaling (double bw)
+{
+    printf ("reference memcpy speed = %.1fMB/s (%.1fMP/s for 32bpp fills)\n",
+            bw / 1000000., bw / 4000000);
+
+    if (use_scaling)
+    {
+	printf ("---\n");
+	if (filter == PIXMAN_FILTER_BILINEAR)
+	    printf ("BILINEAR scaling\n");
+	else if (filter == PIXMAN_FILTER_NEAREST)
+	    printf ("NEAREST scaling\n");
+	else
+	    printf ("UNKNOWN scaling\n");
+    }
+
+    printf ("---\n");
+}
+
+static void
 usage (const char *progname)
 {
     printf ("Usage: %s [-b] [-n] pattern\n", progname);
@@ -1041,7 +1061,6 @@ usage (const char *progname)
 int
 main (int argc, char *argv[])
 {
-    double x;
     int i;
     const char *pattern = NULL;
     for (i = 1; i < argc; i++)
@@ -1079,20 +1098,8 @@ main (int argc, char *argv[])
     mask = dst + (BUFSIZE / 4);
 
     print_explanation ();
-    bandwidth = x = bench_memcpy ();
-    printf ("reference memcpy speed = %.1fMB/s (%.1fMP/s for 32bpp fills)\n",
-            x / 1000000., x / 4000000);
-    if (use_scaling)
-    {
-	printf ("---\n");
-	if (filter == PIXMAN_FILTER_BILINEAR)
-	    printf ("BILINEAR scaling\n");
-	else if (filter == PIXMAN_FILTER_NEAREST)
-	    printf ("NEAREST scaling\n");
-	else
-	    printf ("UNKNOWN scaling\n");
-    }
-    printf ("---\n");
+    bandwidth = bench_memcpy ();
+    print_speed_scaling (bandwidth);
 
     if (strcmp (pattern, "all") == 0)
     {
