@@ -165,7 +165,7 @@ call_func (pixman_composite_func_t func,
     func (0, &info);
 }
 
-void
+double
 noinline
 bench_L  (pixman_op_t              op,
           pixman_image_t *         src_img,
@@ -204,9 +204,11 @@ bench_L  (pixman_op_t              op,
 	call_func (func, op, src_img, mask_img, dst_img, x, 0, x, 0, 63 - x, 0, width, lines_count);
     }
     qx = q;
+
+    return (double)n * lines_count * width;
 }
 
-void
+double
 noinline
 bench_M (pixman_op_t              op,
          pixman_image_t *         src_img,
@@ -224,6 +226,8 @@ bench_M (pixman_op_t              op,
 	    x = 0;
 	call_func (func, op, src_img, mask_img, dst_img, x, 0, x, 0, 1, 0, WIDTH - 64, HEIGHT);
     }
+
+    return (double)n * (WIDTH - 64) * HEIGHT;
 }
 
 double
@@ -476,13 +480,12 @@ bench_composite (const char *testname,
     n = 1 + npix / (l1test_width * 8);
     t1 = gettime ();
 #if EXCLUDE_OVERHEAD
-    bench_L (op, src_img, mask_img, dst_img, n, pixman_image_composite_empty, l1test_width, 1);
+    pix_cnt = bench_L (op, src_img, mask_img, dst_img, n, pixman_image_composite_empty, l1test_width, 1);
 #endif
     t2 = gettime ();
-    bench_L (op, src_img, mask_img, dst_img, n, func, l1test_width, 1);
+    pix_cnt = bench_L (op, src_img, mask_img, dst_img, n, func, l1test_width, 1);
     t3 = gettime ();
-    printf ("  L1:%7.2f", (double)n * l1test_width * 1 /
-            ((t3 - t2) - (t2 - t1)) / 1000000.);
+    printf ("  L1:%7.2f", pix_cnt / ((t3 - t2) - (t2 - t1)) / 1000000.);
     fflush (stdout);
 
     memcpy (dst, src, BUFSIZE);
@@ -495,13 +498,12 @@ bench_composite (const char *testname,
     n = 1 + npix / (l1test_width * nlines);
     t1 = gettime ();
 #if EXCLUDE_OVERHEAD
-    bench_L (op, src_img, mask_img, dst_img, n, pixman_image_composite_empty, l1test_width, nlines);
+    pix_cnt = bench_L (op, src_img, mask_img, dst_img, n, pixman_image_composite_empty, l1test_width, nlines);
 #endif
     t2 = gettime ();
-    bench_L (op, src_img, mask_img, dst_img, n, func, l1test_width, nlines);
+    pix_cnt = bench_L (op, src_img, mask_img, dst_img, n, func, l1test_width, nlines);
     t3 = gettime ();
-    printf ("  L2:%7.2f", (double)n * l1test_width * nlines /
-            ((t3 - t2) - (t2 - t1)) / 1000000.);
+    printf ("  L2:%7.2f", pix_cnt / ((t3 - t2) - (t2 - t1)) / 1000000.);
     fflush (stdout);
 
     memcpy (dst, src, BUFSIZE);
@@ -510,14 +512,14 @@ bench_composite (const char *testname,
     n = 1 + npix / (WIDTH * HEIGHT);
     t1 = gettime ();
 #if EXCLUDE_OVERHEAD
-    bench_M (op, src_img, mask_img, dst_img, n, pixman_image_composite_empty);
+    pix_cnt = bench_M (op, src_img, mask_img, dst_img, n, pixman_image_composite_empty);
 #endif
     t2 = gettime ();
-    bench_M (op, src_img, mask_img, dst_img, n, func);
+    pix_cnt = bench_M (op, src_img, mask_img, dst_img, n, func);
     t3 = gettime ();
     printf ("  M:%6.2f (%6.2f%%)",
-        ((double)n * (WIDTH - 64) * HEIGHT / ((t3 - t2) - (t2 - t1))) / 1000000.,
-        ((double)n * (WIDTH - 64) * HEIGHT / ((t3 - t2) - (t2 - t1)) * bytes_per_pix) * (100.0 / bandwidth) );
+        (pix_cnt / ((t3 - t2) - (t2 - t1))) / 1000000.,
+        (pix_cnt / ((t3 - t2) - (t2 - t1)) * bytes_per_pix) * (100.0 / bandwidth) );
     fflush (stdout);
 
     memcpy (dst, src, BUFSIZE);
