@@ -822,6 +822,8 @@ parse_test_pattern (test_entry_t *test, const char *pattern)
         }
     }
 
+    test->testname = pattern;
+
     /* Extract operator, may contain delimiters,
      * so take the longest string that matches.
      */
@@ -947,7 +949,21 @@ parser_self_test (void)
 }
 
 static void
-run_one_test (const char *pattern, double bandwidth_)
+print_test_details (const test_entry_t *test)
+{
+    printf ("%s: %s, src %s%s, mask %s%s%s, dst %s\n",
+            test->testname,
+            operator_name (test->op),
+            format_name (test->src_fmt),
+            test->src_flags & SOLID_FLAG ? " solid" : "",
+            format_name (test->mask_fmt),
+            test->mask_flags & SOLID_FLAG ? " solid" : "",
+            test->mask_flags & CA_FLAG ? " CA" : "",
+            format_name (test->dst_fmt));
+}
+
+static void
+run_one_test (const char *pattern, double bandwidth_, pixman_bool_t prdetails)
 {
     test_entry_t test;
 
@@ -955,6 +971,12 @@ run_one_test (const char *pattern, double bandwidth_)
     {
         printf ("Error: Could not parse the test pattern '%s'.\n", pattern);
         return;
+    }
+
+    if (prdetails)
+    {
+        print_test_details (&test);
+        printf ("---\n");
     }
 
     bench_composite (pattern,
@@ -973,7 +995,7 @@ run_default_tests (double bandwidth_)
     int i;
 
     for (i = 0; i < ARRAY_LENGTH (tests_tbl); i++)
-        run_one_test (tests_tbl[i].testname, bandwidth_);
+        run_one_test (tests_tbl[i].testname, bandwidth_, FALSE);
 }
 
 static void
@@ -1078,7 +1100,7 @@ main (int argc, char *argv[])
     }
     else
     {
-        run_one_test (pattern, bandwidth);
+        run_one_test (pattern, bandwidth, TRUE);
     }
 
     free (src);
