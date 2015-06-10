@@ -589,13 +589,13 @@ bench_composite (const char *testname,
 
 struct test_entry
 {
-    char *testname;
-    int   src_fmt;
-    int   src_flags;
-    int   op;
-    int   mask_fmt;
-    int   mask_flags;
-    int   dst_fmt;
+    const char *testname;
+    int         src_fmt;
+    int         src_flags;
+    int         op;
+    int         mask_fmt;
+    int         mask_flags;
+    int         dst_fmt;
 };
 
 typedef struct test_entry test_entry_t;
