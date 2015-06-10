@@ -370,6 +370,15 @@ bench_RT (pixman_op_t              op,
     return pix_cnt;
 }
 
+static double
+Mpx_per_sec (double pix_cnt, double t1, double t2, double t3)
+{
+    double overhead = t2 - t1;
+    double testtime = t3 - t2;
+
+    return pix_cnt / (testtime - overhead) / 1e6;
+}
+
 void
 bench_composite (const char *testname,
                  int         src_fmt,
@@ -485,7 +494,7 @@ bench_composite (const char *testname,
     t2 = gettime ();
     pix_cnt = bench_L (op, src_img, mask_img, dst_img, n, func, l1test_width, 1);
     t3 = gettime ();
-    printf ("  L1:%7.2f", pix_cnt / ((t3 - t2) - (t2 - t1)) / 1000000.);
+    printf ("  L1:%7.2f", Mpx_per_sec (pix_cnt, t1, t2, t3));
     fflush (stdout);
 
     memcpy (dst, src, BUFSIZE);
@@ -503,7 +512,7 @@ bench_composite (const char *testname,
     t2 = gettime ();
     pix_cnt = bench_L (op, src_img, mask_img, dst_img, n, func, l1test_width, nlines);
     t3 = gettime ();
-    printf ("  L2:%7.2f", pix_cnt / ((t3 - t2) - (t2 - t1)) / 1000000.);
+    printf ("  L2:%7.2f", Mpx_per_sec (pix_cnt, t1, t2, t3));
     fflush (stdout);
 
     memcpy (dst, src, BUFSIZE);
@@ -518,7 +527,7 @@ bench_composite (const char *testname,
     pix_cnt = bench_M (op, src_img, mask_img, dst_img, n, func);
     t3 = gettime ();
     printf ("  M:%6.2f (%6.2f%%)",
-        (pix_cnt / ((t3 - t2) - (t2 - t1))) / 1000000.,
+        Mpx_per_sec (pix_cnt, t1, t2, t3),
         (pix_cnt / ((t3 - t2) - (t2 - t1)) * bytes_per_pix) * (100.0 / bandwidth) );
     fflush (stdout);
 
@@ -533,7 +542,7 @@ bench_composite (const char *testname,
     t2 = gettime ();
     pix_cnt = bench_HT (op, src_img, mask_img, dst_img, n, func);
     t3 = gettime ();
-    printf ("  HT:%6.2f", (double)pix_cnt / ((t3 - t2) - (t2 - t1)) / 1000000.);
+    printf ("  HT:%6.2f", Mpx_per_sec (pix_cnt, t1, t2, t3));
     fflush (stdout);
 
     memcpy (dst, src, BUFSIZE);
@@ -547,7 +556,7 @@ bench_composite (const char *testname,
     t2 = gettime ();
     pix_cnt = bench_VT (op, src_img, mask_img, dst_img, n, func);
     t3 = gettime ();
-    printf ("  VT:%6.2f", (double)pix_cnt / ((t3 - t2) - (t2 - t1)) / 1000000.);
+    printf ("  VT:%6.2f", Mpx_per_sec (pix_cnt, t1, t2, t3));
     fflush (stdout);
 
     memcpy (dst, src, BUFSIZE);
@@ -561,7 +570,7 @@ bench_composite (const char *testname,
     t2 = gettime ();
     pix_cnt = bench_R (op, src_img, mask_img, dst_img, n, func, WIDTH, HEIGHT);
     t3 = gettime ();
-    printf ("  R:%6.2f", (double)pix_cnt / ((t3 - t2) - (t2 - t1)) / 1000000.);
+    printf ("  R:%6.2f", Mpx_per_sec (pix_cnt, t1, t2, t3));
     fflush (stdout);
 
     memcpy (dst, src, BUFSIZE);
@@ -575,7 +584,7 @@ bench_composite (const char *testname,
     t2 = gettime ();
     pix_cnt = bench_RT (op, src_img, mask_img, dst_img, n, func, WIDTH, HEIGHT);
     t3 = gettime ();
-    printf ("  RT:%6.2f (%4.0fKops/s)\n", (double)pix_cnt / ((t3 - t2) - (t2 - t1)) / 1000000., (double) n / ((t3 - t2) * 1000));
+    printf ("  RT:%6.2f (%4.0fKops/s)\n", Mpx_per_sec (pix_cnt, t1, t2, t3), (double) n / ((t3 - t2) * 1000));
 
     if (mask_img) {
 	pixman_image_unref (mask_img);
