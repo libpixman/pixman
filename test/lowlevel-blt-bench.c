@@ -976,6 +976,14 @@ run_default_tests (double bandwidth_)
         run_one_test (tests_tbl[i].testname, bandwidth_);
 }
 
+static void
+usage (const char *progname)
+{
+    printf ("Usage: %s [-b] [-n] pattern\n", progname);
+    printf ("  -n : benchmark nearest scaling\n");
+    printf ("  -b : benchmark bilinear scaling\n");
+}
+
 int
 main (int argc, char *argv[])
 {
@@ -1005,9 +1013,7 @@ main (int argc, char *argv[])
 
     if (!pattern)
     {
-	printf ("Usage: lowlevel-blt-bench [-b] [-n] pattern\n");
-	printf ("  -n : benchmark nearest scaling\n");
-	printf ("  -b : benchmark bilinear scaling\n");
+	usage (argv[0]);
 	return 1;
     }
 
