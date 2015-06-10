@@ -55,7 +55,7 @@ uint32_t *dst;
 uint32_t *src;
 uint32_t *mask;
 
-double bandwidth = 0;
+double bandwidth = 0.0;
 
 double
 bench_memcpy ()
@@ -1086,10 +1086,11 @@ print_speed_scaling (double bw)
 static void
 usage (const char *progname)
 {
-    printf ("Usage: %s [-b] [-n] [-c] pattern\n", progname);
+    printf ("Usage: %s [-b] [-n] [-c] [-m M] pattern\n", progname);
     printf ("  -n : benchmark nearest scaling\n");
     printf ("  -b : benchmark bilinear scaling\n");
     printf ("  -c : print output as CSV data\n");
+    printf ("  -m M : set reference memcpy speed to M MB/s instead of measuring it\n");
 }
 
 int
@@ -1115,6 +1116,9 @@ main (int argc, char *argv[])
 
 	    if (strchr (argv[i] + 1, 'c'))
 		use_csv_output = TRUE;
+
+	    if (strcmp (argv[i], "-m") == 0 && i + 1 < argc)
+		bandwidth = atof (argv[++i]) * 1e6;
 	}
 	else
 	{
@@ -1138,7 +1142,8 @@ main (int argc, char *argv[])
     if (!use_csv_output)
         print_explanation ();
 
-    bandwidth = bench_memcpy ();
+    if (bandwidth < 1.0)
+        bandwidth = bench_memcpy ();
     if (!use_csv_output)
         print_speed_scaling (bandwidth);
 
