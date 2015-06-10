@@ -90,6 +90,7 @@ bench_memcpy ()
 
 static pixman_bool_t use_scaling = FALSE;
 static pixman_filter_t filter = PIXMAN_FILTER_NEAREST;
+static pixman_bool_t use_csv_output = FALSE;
 
 /* nearly 1x scale factor */
 static pixman_transform_t m =
@@ -474,9 +475,9 @@ bench_composite (const char *testname,
                                          dst,
                                          XWIDTH * 4);
 
-
-    printf ("%24s %c", testname, func != pixman_image_composite_wrapper ?
-            '-' : '=');
+    if (!use_csv_output)
+        printf ("%24s %c", testname, func != pixman_image_composite_wrapper ?
+                '-' : '=');
 
     memcpy (dst, src, BUFSIZE);
     memcpy (src, dst, BUFSIZE);
@@ -494,7 +495,10 @@ bench_composite (const char *testname,
     t2 = gettime ();
     pix_cnt = bench_L (op, src_img, mask_img, dst_img, n, func, l1test_width, 1);
     t3 = gettime ();
-    printf ("  L1:%7.2f", Mpx_per_sec (pix_cnt, t1, t2, t3));
+    if (use_csv_output)
+        printf ("%g,", Mpx_per_sec (pix_cnt, t1, t2, t3));
+    else
+        printf ("  L1:%7.2f", Mpx_per_sec (pix_cnt, t1, t2, t3));
     fflush (stdout);
 
     memcpy (dst, src, BUFSIZE);
@@ -512,7 +516,10 @@ bench_composite (const char *testname,
     t2 = gettime ();
     pix_cnt = bench_L (op, src_img, mask_img, dst_img, n, func, l1test_width, nlines);
     t3 = gettime ();
-    printf ("  L2:%7.2f", Mpx_per_sec (pix_cnt, t1, t2, t3));
+    if (use_csv_output)
+        printf ("%g,", Mpx_per_sec (pix_cnt, t1, t2, t3));
+    else
+        printf ("  L2:%7.2f", Mpx_per_sec (pix_cnt, t1, t2, t3));
     fflush (stdout);
 
     memcpy (dst, src, BUFSIZE);
@@ -526,9 +533,11 @@ bench_composite (const char *testname,
     t2 = gettime ();
     pix_cnt = bench_M (op, src_img, mask_img, dst_img, n, func);
     t3 = gettime ();
-    printf ("  M:%6.2f (%6.2f%%)",
-        Mpx_per_sec (pix_cnt, t1, t2, t3),
-        (pix_cnt / ((t3 - t2) - (t2 - t1)) * bytes_per_pix) * (100.0 / bandwidth) );
+    if (use_csv_output)
+        printf ("%g,", Mpx_per_sec (pix_cnt, t1, t2, t3));
+    else
+        printf ("  M:%6.2f (%6.2f%%)", Mpx_per_sec (pix_cnt, t1, t2, t3),
+                (pix_cnt / ((t3 - t2) - (t2 - t1)) * bytes_per_pix) * (100.0 / bandwidth) );
     fflush (stdout);
 
     memcpy (dst, src, BUFSIZE);
@@ -542,7 +551,10 @@ bench_composite (const char *testname,
     t2 = gettime ();
     pix_cnt = bench_HT (op, src_img, mask_img, dst_img, n, func);
     t3 = gettime ();
-    printf ("  HT:%6.2f", Mpx_per_sec (pix_cnt, t1, t2, t3));
+    if (use_csv_output)
+        printf ("%g,", Mpx_per_sec (pix_cnt, t1, t2, t3));
+    else
+        printf ("  HT:%6.2f", Mpx_per_sec (pix_cnt, t1, t2, t3));
     fflush (stdout);
 
     memcpy (dst, src, BUFSIZE);
@@ -556,7 +568,10 @@ bench_composite (const char *testname,
     t2 = gettime ();
     pix_cnt = bench_VT (op, src_img, mask_img, dst_img, n, func);
     t3 = gettime ();
-    printf ("  VT:%6.2f", Mpx_per_sec (pix_cnt, t1, t2, t3));
+    if (use_csv_output)
+        printf ("%g,", Mpx_per_sec (pix_cnt, t1, t2, t3));
+    else
+        printf ("  VT:%6.2f", Mpx_per_sec (pix_cnt, t1, t2, t3));
     fflush (stdout);
 
     memcpy (dst, src, BUFSIZE);
@@ -570,7 +585,10 @@ bench_composite (const char *testname,
     t2 = gettime ();
     pix_cnt = bench_R (op, src_img, mask_img, dst_img, n, func, WIDTH, HEIGHT);
     t3 = gettime ();
-    printf ("  R:%6.2f", Mpx_per_sec (pix_cnt, t1, t2, t3));
+    if (use_csv_output)
+        printf ("%g,", Mpx_per_sec (pix_cnt, t1, t2, t3));
+    else
+        printf ("  R:%6.2f", Mpx_per_sec (pix_cnt, t1, t2, t3));
     fflush (stdout);
 
     memcpy (dst, src, BUFSIZE);
@@ -584,7 +602,10 @@ bench_composite (const char *testname,
     t2 = gettime ();
     pix_cnt = bench_RT (op, src_img, mask_img, dst_img, n, func, WIDTH, HEIGHT);
     t3 = gettime ();
-    printf ("  RT:%6.2f (%4.0fKops/s)\n", Mpx_per_sec (pix_cnt, t1, t2, t3), (double) n / ((t3 - t2) * 1000));
+    if (use_csv_output)
+        printf ("%g\n", Mpx_per_sec (pix_cnt, t1, t2, t3));
+    else
+        printf ("  RT:%6.2f (%4.0fKops/s)\n", Mpx_per_sec (pix_cnt, t1, t2, t3), (double) n / ((t3 - t2) * 1000));
 
     if (mask_img) {
 	pixman_image_unref (mask_img);
@@ -956,7 +977,8 @@ parser_self_test (void)
         exit (EXIT_FAILURE);
     }
 
-    printf ("Parser self-test complete.\n");
+    if (!use_csv_output)
+        printf ("Parser self-test complete.\n");
 }
 
 static void
@@ -1064,9 +1086,10 @@ print_speed_scaling (double bw)
 static void
 usage (const char *progname)
 {
-    printf ("Usage: %s [-b] [-n] pattern\n", progname);
+    printf ("Usage: %s [-b] [-n] [-c] pattern\n", progname);
     printf ("  -n : benchmark nearest scaling\n");
     printf ("  -b : benchmark bilinear scaling\n");
+    printf ("  -c : print output as CSV data\n");
 }
 
 int
@@ -1074,6 +1097,7 @@ main (int argc, char *argv[])
 {
     int i;
     const char *pattern = NULL;
+
     for (i = 1; i < argc; i++)
     {
 	if (argv[i][0] == '-')
@@ -1088,6 +1112,9 @@ main (int argc, char *argv[])
 		use_scaling = TRUE;
 		filter = PIXMAN_FILTER_NEAREST;
 	    }
+
+	    if (strchr (argv[i] + 1, 'c'))
+		use_csv_output = TRUE;
 	}
 	else
 	{
@@ -1108,18 +1135,17 @@ main (int argc, char *argv[])
     dst = src + (BUFSIZE / 4);
     mask = dst + (BUFSIZE / 4);
 
-    print_explanation ();
+    if (!use_csv_output)
+        print_explanation ();
+
     bandwidth = bench_memcpy ();
-    print_speed_scaling (bandwidth);
+    if (!use_csv_output)
+        print_speed_scaling (bandwidth);
 
     if (strcmp (pattern, "all") == 0)
-    {
         run_default_tests (bandwidth);
-    }
     else
-    {
-        run_one_test (pattern, bandwidth, TRUE);
-    }
+        run_one_test (pattern, bandwidth, !use_csv_output);
 
     free (src);
     return 0;
