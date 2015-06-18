@@ -2765,6 +2765,31 @@ vmx_composite_add_8_8 (pixman_implementation_t *imp,
     }
 }
 
+static void
+vmx_composite_add_8888_8888 (pixman_implementation_t *imp,
+                              pixman_composite_info_t *info)
+{
+    PIXMAN_COMPOSITE_ARGS (info);
+    uint32_t    *dst_line, *dst;
+    uint32_t    *src_line, *src;
+    int dst_stride, src_stride;
+
+    PIXMAN_IMAGE_GET_LINE (
+	src_image, src_x, src_y, uint32_t, src_stride, src_line, 1);
+    PIXMAN_IMAGE_GET_LINE (
+	dest_image, dest_x, dest_y, uint32_t, dst_stride, dst_line, 1);
+
+    while (height--)
+    {
+	dst = dst_line;
+	dst_line += dst_stride;
+	src = src_line;
+	src_line += src_stride;
+
+	vmx_combine_add_u (imp, op, dst, src, NULL, width);
+    }
+}
+
 static const pixman_fast_path_t vmx_fast_paths[] =
 {
     PIXMAN_STD_FAST_PATH (OVER, a8r8g8b8, null, a8r8g8b8, vmx_composite_over_8888_8888),
@@ -2774,6 +2799,8 @@ static const pixman_fast_path_t vmx_fast_paths[] =
 
     /* PIXMAN_OP_ADD */
     PIXMAN_STD_FAST_PATH (ADD, a8, null, a8, vmx_composite_add_8_8),
+    PIXMAN_STD_FAST_PATH (ADD, a8r8g8b8, null, a8r8g8b8, vmx_composite_add_8888_8888),
+    PIXMAN_STD_FAST_PATH (ADD, a8b8g8r8, null, a8b8g8r8, vmx_composite_add_8888_8888),
 
     {   PIXMAN_OP_NONE	},
 };
