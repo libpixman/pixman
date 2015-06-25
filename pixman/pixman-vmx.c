@@ -57,12 +57,22 @@ pix_multiply (vector unsigned int p, vector unsigned int a)
 
     /* unpack to short */
     hi = (vector unsigned short)
+#ifdef WORDS_BIGENDIAN
 	vec_mergeh ((vector unsigned char)AVV (0),
 		    (vector unsigned char)p);
+#else
+	vec_mergeh ((vector unsigned char) p,
+		    (vector unsigned char) AVV (0));
+#endif
 
     mod = (vector unsigned short)
+#ifdef WORDS_BIGENDIAN
 	vec_mergeh ((vector unsigned char)AVV (0),
 		    (vector unsigned char)a);
+#else
+	vec_mergeh ((vector unsigned char) a,
+		    (vector unsigned char) AVV (0));
+#endif
 
     hi = vec_mladd (hi, mod, (vector unsigned short)
                     AVV (0x0080, 0x0080, 0x0080, 0x0080,
@@ -74,11 +84,22 @@ pix_multiply (vector unsigned int p, vector unsigned int a)
 
     /* unpack to short */
     lo = (vector unsigned short)
+#ifdef WORDS_BIGENDIAN
 	vec_mergel ((vector unsigned char)AVV (0),
 		    (vector unsigned char)p);
+#else
+	vec_mergel ((vector unsigned char) p,
+		    (vector unsigned char) AVV (0));
+#endif
+
     mod = (vector unsigned short)
+#ifdef WORDS_BIGENDIAN
 	vec_mergel ((vector unsigned char)AVV (0),
 		    (vector unsigned char)a);
+#else
+	vec_mergel ((vector unsigned char) a,
+		    (vector unsigned char) AVV (0));
+#endif
 
     lo = vec_mladd (lo, mod, (vector unsigned short)
                     AVV (0x0080, 0x0080, 0x0080, 0x0080,
