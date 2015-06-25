@@ -136,6 +136,7 @@ over (vector unsigned int src,
     over (pix_multiply (src, mask),					\
           pix_multiply (srca, mask), dest)
 
+#ifdef WORDS_BIGENDIAN
 
 #define COMPUTE_SHIFT_MASK(source)					\
     source ## _mask = vec_lvsl (0, source);
@@ -168,6 +169,30 @@ over (vector unsigned int src,
     tmp2 = (typeof(tmp2))vec_ld (15, mask);		  \
     v ## mask = (typeof(v ## mask))			  \
 	vec_perm (tmp1, tmp2, mask ## _mask);
+
+#else
+
+/* Now the COMPUTE_SHIFT_{MASK, MASKS, MASKC} below are just no-op.
+ * They are defined that way because little endian altivec can do unaligned
+ * reads natively and have no need for constructing the permutation pattern
+ * variables.
+ */
+#define COMPUTE_SHIFT_MASK(source)
+
+#define COMPUTE_SHIFT_MASKS(dest, source)
+
+#define COMPUTE_SHIFT_MASKC(dest, source, mask)
+
+# define LOAD_VECTORS(dest, source)			\
+    v ## source = *((typeof(v ## source)*)source);	\
+    v ## dest = *((typeof(v ## dest)*)dest);
+
+# define LOAD_VECTORSC(dest, source, mask)		\
+    v ## source = *((typeof(v ## source)*)source);	\
+    v ## dest = *((typeof(v ## dest)*)dest);		\
+    v ## mask = *((typeof(v ## mask)*)mask);
+
+#endif /* WORDS_BIGENDIAN */
 
 #define LOAD_VECTORSM(dest, source, mask)				\
     LOAD_VECTORSC (dest, source, mask)					\
