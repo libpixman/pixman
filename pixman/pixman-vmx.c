@@ -2715,6 +2715,114 @@ vmx_composite_over_8888_8888 (pixman_implementation_t *imp,
 }
 
 static void
+vmx_composite_over_n_8888_8888_ca (pixman_implementation_t *imp,
+                                    pixman_composite_info_t *info)
+{
+    PIXMAN_COMPOSITE_ARGS (info);
+    uint32_t src;
+    uint32_t    *dst_line, d;
+    uint32_t    *mask_line, m;
+    uint32_t pack_cmp;
+    int dst_stride, mask_stride;
+
+    vector unsigned int vsrc, valpha, vmask, vdest;
+
+    vector unsigned int vmx_dst, vmx_dst_lo, vmx_dst_hi;
+    vector unsigned int vmx_mask, vmx_mask_lo, vmx_mask_hi;
+
+    src = _pixman_image_get_solid (imp, src_image, dest_image->bits.format);
+
+    if (src == 0)
+	return;
+
+    PIXMAN_IMAGE_GET_LINE (
+	dest_image, dest_x, dest_y, uint32_t, dst_stride, dst_line, 1);
+    PIXMAN_IMAGE_GET_LINE (
+	mask_image, mask_x, mask_y, uint32_t, mask_stride, mask_line, 1);
+
+    vsrc = unpacklo_128_16x8(create_mask_1x32_128 (&src),
+			    (vector unsigned int) AVV(0));
+
+    valpha = expand_alpha_1x128(vsrc);
+
+    while (height--)
+    {
+	int w = width;
+	const uint32_t *pm = (uint32_t *)mask_line;
+	uint32_t *pd = (uint32_t *)dst_line;
+
+	dst_line += dst_stride;
+	mask_line += mask_stride;
+
+	while (w && (uintptr_t)pd & 15)
+	{
+	    m = *pm++;
+
+	    if (m)
+	    {
+		d = *pd;
+		vmask = unpack_32_1x128(m);
+		vdest = unpack_32_1x128(d);
+
+		*pd = pack_1x128_32(in_over (vsrc, valpha, vmask, vdest));
+	    }
+
+	    pd++;
+	    w--;
+	}
+
+	while (w >= 4)
+	{
+	    /* pm is NOT necessarily 16-byte aligned */
+	    vmx_mask = load_128_unaligned (pm);
+
+	    pack_cmp = vec_all_eq(vmx_mask, (vector unsigned int) AVV(0));
+
+	    /* if all bits in mask are zero, pack_cmp is not 0 */
+	    if (pack_cmp == 0)
+	    {
+		/* pd is 16-byte aligned */
+		vmx_dst = load_128_aligned (pd);
+
+		unpack_128_2x128 (vmx_mask, (vector unsigned int) AVV(0),
+				    &vmx_mask_lo, &vmx_mask_hi);
+
+		unpack_128_2x128 (vmx_dst, (vector unsigned int) AVV(0),
+				    &vmx_dst_lo, &vmx_dst_hi);
+
+		in_over_2x128 (&vsrc, &vsrc,
+			       &valpha, &valpha,
+			       &vmx_mask_lo, &vmx_mask_hi,
+			       &vmx_dst_lo, &vmx_dst_hi);
+
+		save_128_aligned(pd, pack_2x128_128(vmx_dst_lo, vmx_dst_hi));
+	    }
+
+	    pd += 4;
+	    pm += 4;
+	    w -= 4;
+	}
+
+	while (w)
+	{
+	    m = *pm++;
+
+	    if (m)
+	    {
+		d = *pd;
+		vmask = unpack_32_1x128(m);
+		vdest = unpack_32_1x128(d);
+
+		*pd = pack_1x128_32(in_over (vsrc, valpha, vmask, vdest));
+	    }
+
+	    pd++;
+	    w--;
+	}
+    }
+}
+
+static void
 vmx_composite_add_8_8 (pixman_implementation_t *imp,
             pixman_composite_info_t *info)
 {
@@ -2796,6 +2904,10 @@ static const pixman_fast_path_t vmx_fast_paths[] =
     PIXMAN_STD_FAST_PATH (OVER, a8r8g8b8, null, x8r8g8b8, vmx_composite_over_8888_8888),
     PIXMAN_STD_FAST_PATH (OVER, a8b8g8r8, null, a8b8g8r8, vmx_composite_over_8888_8888),
     PIXMAN_STD_FAST_PATH (OVER, a8b8g8r8, null, x8b8g8r8, vmx_composite_over_8888_8888),
+    PIXMAN_STD_FAST_PATH_CA (OVER, solid, a8r8g8b8, a8r8g8b8, vmx_composite_over_n_8888_8888_ca),
+    PIXMAN_STD_FAST_PATH_CA (OVER, solid, a8r8g8b8, x8r8g8b8, vmx_composite_over_n_8888_8888_ca),
+    PIXMAN_STD_FAST_PATH_CA (OVER, solid, a8b8g8r8, a8b8g8r8, vmx_composite_over_n_8888_8888_ca),
+    PIXMAN_STD_FAST_PATH_CA (OVER, solid, a8b8g8r8, x8b8g8r8, vmx_composite_over_n_8888_8888_ca),
 
     /* PIXMAN_OP_ADD */
     PIXMAN_STD_FAST_PATH (ADD, a8, null, a8, vmx_composite_add_8_8),
