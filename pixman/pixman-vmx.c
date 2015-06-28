@@ -2954,6 +2954,129 @@ vmx_composite_add_8888_8888 (pixman_implementation_t *imp,
     }
 }
 
+static force_inline void
+scaled_nearest_scanline_vmx_8888_8888_OVER (uint32_t*       pd,
+                                            const uint32_t* ps,
+                                            int32_t         w,
+                                            pixman_fixed_t  vx,
+                                            pixman_fixed_t  unit_x,
+                                            pixman_fixed_t  src_width_fixed,
+                                            pixman_bool_t   fully_transparent_src)
+{
+    uint32_t s, d;
+    const uint32_t* pm = NULL;
+
+    vector unsigned int vmx_dst_lo, vmx_dst_hi;
+    vector unsigned int vmx_src_lo, vmx_src_hi;
+    vector unsigned int vmx_alpha_lo, vmx_alpha_hi;
+
+    if (fully_transparent_src)
+	return;
+
+    /* Align dst on a 16-byte boundary */
+    while (w && ((uintptr_t)pd & 15))
+    {
+	d = *pd;
+	s = combine1 (ps + pixman_fixed_to_int (vx), pm);
+	vx += unit_x;
+	while (vx >= 0)
+	    vx -= src_width_fixed;
+
+	*pd++ = core_combine_over_u_pixel_vmx (s, d);
+	if (pm)
+	    pm++;
+	w--;
+    }
+
+    while (w >= 4)
+    {
+	vector unsigned int tmp;
+	uint32_t tmp1, tmp2, tmp3, tmp4;
+
+	tmp1 = *(ps + pixman_fixed_to_int (vx));
+	vx += unit_x;
+	while (vx >= 0)
+	    vx -= src_width_fixed;
+	tmp2 = *(ps + pixman_fixed_to_int (vx));
+	vx += unit_x;
+	while (vx >= 0)
+	    vx -= src_width_fixed;
+	tmp3 = *(ps + pixman_fixed_to_int (vx));
+	vx += unit_x;
+	while (vx >= 0)
+	    vx -= src_width_fixed;
+	tmp4 = *(ps + pixman_fixed_to_int (vx));
+	vx += unit_x;
+	while (vx >= 0)
+	    vx -= src_width_fixed;
+
+	tmp[0] = tmp1;
+	tmp[1] = tmp2;
+	tmp[2] = tmp3;
+	tmp[3] = tmp4;
+
+	vmx_src_hi = combine4 ((const uint32_t *) &tmp, pm);
+
+	if (is_opaque (vmx_src_hi))
+	{
+	    save_128_aligned (pd, vmx_src_hi);
+	}
+	else if (!is_zero (vmx_src_hi))
+	{
+	    vmx_dst_hi = load_128_aligned (pd);
+
+	    unpack_128_2x128 (vmx_src_hi, (vector unsigned int) AVV(0),
+				&vmx_src_lo, &vmx_src_hi);
+
+	    unpack_128_2x128 (vmx_dst_hi, (vector unsigned int) AVV(0),
+				&vmx_dst_lo, &vmx_dst_hi);
+
+	    expand_alpha_2x128 (
+		vmx_src_lo, vmx_src_hi, &vmx_alpha_lo, &vmx_alpha_hi);
+
+	    over_2x128 (&vmx_src_lo, &vmx_src_hi,
+			&vmx_alpha_lo, &vmx_alpha_hi,
+			&vmx_dst_lo, &vmx_dst_hi);
+
+	    /* rebuid the 4 pixel data and save*/
+	    save_128_aligned (pd, pack_2x128_128 (vmx_dst_lo, vmx_dst_hi));
+	}
+
+	w -= 4;
+	pd += 4;
+	if (pm)
+	    pm += 4;
+    }
+
+    while (w)
+    {
+	d = *pd;
+	s = combine1 (ps + pixman_fixed_to_int (vx), pm);
+	vx += unit_x;
+	while (vx >= 0)
+	    vx -= src_width_fixed;
+
+	*pd++ = core_combine_over_u_pixel_vmx (s, d);
+	if (pm)
+	    pm++;
+
+	w--;
+    }
+}
+
+FAST_NEAREST_MAINLOOP (vmx_8888_8888_cover_OVER,
+		       scaled_nearest_scanline_vmx_8888_8888_OVER,
+		       uint32_t, uint32_t, COVER)
+FAST_NEAREST_MAINLOOP (vmx_8888_8888_none_OVER,
+		       scaled_nearest_scanline_vmx_8888_8888_OVER,
+		       uint32_t, uint32_t, NONE)
+FAST_NEAREST_MAINLOOP (vmx_8888_8888_pad_OVER,
+		       scaled_nearest_scanline_vmx_8888_8888_OVER,
+		       uint32_t, uint32_t, PAD)
+FAST_NEAREST_MAINLOOP (vmx_8888_8888_normal_OVER,
+		       scaled_nearest_scanline_vmx_8888_8888_OVER,
+		       uint32_t, uint32_t, NORMAL)
+
 static const pixman_fast_path_t vmx_fast_paths[] =
 {
     PIXMAN_STD_FAST_PATH (OVER, a8r8g8b8, null, a8r8g8b8, vmx_composite_over_8888_8888),
@@ -2973,6 +3096,11 @@ static const pixman_fast_path_t vmx_fast_paths[] =
     /* PIXMAN_OP_SRC */
     PIXMAN_STD_FAST_PATH (SRC, x8r8g8b8, null, a8r8g8b8, vmx_composite_src_x888_8888),
     PIXMAN_STD_FAST_PATH (SRC, x8b8g8r8, null, a8b8g8r8, vmx_composite_src_x888_8888),
+
+    SIMPLE_NEAREST_FAST_PATH (OVER, a8r8g8b8, x8r8g8b8, vmx_8888_8888),
+    SIMPLE_NEAREST_FAST_PATH (OVER, a8b8g8r8, x8b8g8r8, vmx_8888_8888),
+    SIMPLE_NEAREST_FAST_PATH (OVER, a8r8g8b8, a8r8g8b8, vmx_8888_8888),
+    SIMPLE_NEAREST_FAST_PATH (OVER, a8b8g8r8, a8b8g8r8, vmx_8888_8888),
 
     {   PIXMAN_OP_NONE	},
 };
