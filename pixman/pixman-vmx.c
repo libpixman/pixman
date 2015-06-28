@@ -2537,6 +2537,157 @@ vmx_combine_add_ca (pixman_implementation_t *imp,
     }
 }
 
+static pixman_bool_t
+vmx_fill (pixman_implementation_t *imp,
+           uint32_t *               bits,
+           int                      stride,
+           int                      bpp,
+           int                      x,
+           int                      y,
+           int                      width,
+           int                      height,
+           uint32_t		    filler)
+{
+    uint32_t byte_width;
+    uint8_t *byte_line;
+
+    vector unsigned int vfiller;
+
+    if (bpp == 8)
+    {
+	uint8_t b;
+	uint16_t w;
+
+	stride = stride * (int) sizeof (uint32_t) / 1;
+	byte_line = (uint8_t *)(((uint8_t *)bits) + stride * y + x);
+	byte_width = width;
+	stride *= 1;
+
+	b = filler & 0xff;
+	w = (b << 8) | b;
+	filler = (w << 16) | w;
+    }
+    else if (bpp == 16)
+    {
+	stride = stride * (int) sizeof (uint32_t) / 2;
+	byte_line = (uint8_t *)(((uint16_t *)bits) + stride * y + x);
+	byte_width = 2 * width;
+	stride *= 2;
+
+        filler = (filler & 0xffff) * 0x00010001;
+    }
+    else if (bpp == 32)
+    {
+	stride = stride * (int) sizeof (uint32_t) / 4;
+	byte_line = (uint8_t *)(((uint32_t *)bits) + stride * y + x);
+	byte_width = 4 * width;
+	stride *= 4;
+    }
+    else
+    {
+	return FALSE;
+    }
+
+    vfiller = create_mask_1x32_128(&filler);
+
+    while (height--)
+    {
+	int w;
+	uint8_t *d = byte_line;
+	byte_line += stride;
+	w = byte_width;
+
+	if (w >= 1 && ((uintptr_t)d & 1))
+	{
+	    *(uint8_t *)d = filler;
+	    w -= 1;
+	    d += 1;
+	}
+
+	while (w >= 2 && ((uintptr_t)d & 3))
+	{
+	    *(uint16_t *)d = filler;
+	    w -= 2;
+	    d += 2;
+	}
+
+	while (w >= 4 && ((uintptr_t)d & 15))
+	{
+	    *(uint32_t *)d = filler;
+
+	    w -= 4;
+	    d += 4;
+	}
+
+	while (w >= 128)
+	{
+	    vec_st(vfiller, 0, (uint32_t *) d);
+	    vec_st(vfiller, 0, (uint32_t *) d + 4);
+	    vec_st(vfiller, 0, (uint32_t *) d + 8);
+	    vec_st(vfiller, 0, (uint32_t *) d + 12);
+	    vec_st(vfiller, 0, (uint32_t *) d + 16);
+	    vec_st(vfiller, 0, (uint32_t *) d + 20);
+	    vec_st(vfiller, 0, (uint32_t *) d + 24);
+	    vec_st(vfiller, 0, (uint32_t *) d + 28);
+
+	    d += 128;
+	    w -= 128;
+	}
+
+	if (w >= 64)
+	{
+	    vec_st(vfiller, 0, (uint32_t *) d);
+	    vec_st(vfiller, 0, (uint32_t *) d + 4);
+	    vec_st(vfiller, 0, (uint32_t *) d + 8);
+	    vec_st(vfiller, 0, (uint32_t *) d + 12);
+
+	    d += 64;
+	    w -= 64;
+	}
+
+	if (w >= 32)
+	{
+	    vec_st(vfiller, 0, (uint32_t *) d);
+	    vec_st(vfiller, 0, (uint32_t *) d + 4);
+
+	    d += 32;
+	    w -= 32;
+	}
+
+	if (w >= 16)
+	{
+	    vec_st(vfiller, 0, (uint32_t *) d);
+
+	    d += 16;
+	    w -= 16;
+	}
+
+	while (w >= 4)
+	{
+	    *(uint32_t *)d = filler;
+
+	    w -= 4;
+	    d += 4;
+	}
+
+	if (w >= 2)
+	{
+	    *(uint16_t *)d = filler;
+	    w -= 2;
+	    d += 2;
+	}
+
+	if (w >= 1)
+	{
+	    *(uint8_t *)d = filler;
+	    w -= 1;
+	    d += 1;
+	}
+    }
+
+    return TRUE;
+}
+
 static const pixman_fast_path_t vmx_fast_paths[] =
 {
     {   PIXMAN_OP_NONE	},
@@ -2581,6 +2732,8 @@ _pixman_implementation_create_vmx (pixman_implementation_t *fallback)
     imp->combine_32_ca[PIXMAN_OP_ATOP_REVERSE] = vmx_combine_atop_reverse_ca;
     imp->combine_32_ca[PIXMAN_OP_XOR] = vmx_combine_xor_ca;
     imp->combine_32_ca[PIXMAN_OP_ADD] = vmx_combine_add_ca;
+
+    imp->fill = vmx_fill;
 
     return imp;
 }
