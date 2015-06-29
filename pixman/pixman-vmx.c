@@ -3105,6 +3105,52 @@ static const pixman_fast_path_t vmx_fast_paths[] =
     {   PIXMAN_OP_NONE	},
 };
 
+static uint32_t *
+vmx_fetch_x8r8g8b8 (pixman_iter_t *iter, const uint32_t *mask)
+{
+    int w = iter->width;
+    vector unsigned int ff000000 = mask_ff000000;
+    uint32_t *dst = iter->buffer;
+    uint32_t *src = (uint32_t *)iter->bits;
+
+    iter->bits += iter->stride;
+
+    while (w && ((uintptr_t)dst) & 0x0f)
+    {
+	*dst++ = (*src++) | 0xff000000;
+	w--;
+    }
+
+    while (w >= 4)
+    {
+	save_128_aligned(dst, vec_or(load_128_unaligned(src), ff000000));
+
+	dst += 4;
+	src += 4;
+	w -= 4;
+    }
+
+    while (w)
+    {
+	*dst++ = (*src++) | 0xff000000;
+	w--;
+    }
+
+    return iter->buffer;
+}
+
+#define IMAGE_FLAGS							\
+    (FAST_PATH_STANDARD_FLAGS | FAST_PATH_ID_TRANSFORM |		\
+     FAST_PATH_BITS_IMAGE | FAST_PATH_SAMPLES_COVER_CLIP_NEAREST)
+
+static const pixman_iter_info_t vmx_iters[] =
+{
+    { PIXMAN_x8r8g8b8, IMAGE_FLAGS, ITER_NARROW,
+      _pixman_iter_init_bits_stride, vmx_fetch_x8r8g8b8, NULL
+    },
+    { PIXMAN_null },
+};
+
 pixman_implementation_t *
 _pixman_implementation_create_vmx (pixman_implementation_t *fallback)
 {
@@ -3146,6 +3192,8 @@ _pixman_implementation_create_vmx (pixman_implementation_t *fallback)
     imp->combine_32_ca[PIXMAN_OP_ADD] = vmx_combine_add_ca;
 
     imp->fill = vmx_fill;
+
+    imp->iter_info = vmx_iters;
 
     return imp;
 }
