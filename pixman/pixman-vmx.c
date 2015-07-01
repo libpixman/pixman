@@ -3139,6 +3139,49 @@ vmx_fetch_x8r8g8b8 (pixman_iter_t *iter, const uint32_t *mask)
     return iter->buffer;
 }
 
+static uint32_t *
+vmx_fetch_a8 (pixman_iter_t *iter, const uint32_t *mask)
+{
+    int w = iter->width;
+    uint32_t *dst = iter->buffer;
+    uint8_t *src = iter->bits;
+    vector unsigned int vmx0, vmx1, vmx2, vmx3, vmx4, vmx5, vmx6;
+
+    iter->bits += iter->stride;
+
+    while (w && (((uintptr_t)dst) & 15))
+    {
+        *dst++ = *(src++) << 24;
+        w--;
+    }
+
+    while (w >= 16)
+    {
+	vmx0 = load_128_unaligned((uint32_t *) src);
+
+	unpack_128_2x128((vector unsigned int) AVV(0), vmx0, &vmx1, &vmx2);
+	unpack_128_2x128_16((vector unsigned int) AVV(0), vmx1, &vmx3, &vmx4);
+	unpack_128_2x128_16((vector unsigned int) AVV(0), vmx2, &vmx5, &vmx6);
+
+	save_128_aligned(dst, vmx6);
+	save_128_aligned((dst +  4), vmx5);
+	save_128_aligned((dst +  8), vmx4);
+	save_128_aligned((dst + 12), vmx3);
+
+	dst += 16;
+	src += 16;
+	w -= 16;
+    }
+
+    while (w)
+    {
+	*dst++ = *(src++) << 24;
+	w--;
+    }
+
+    return iter->buffer;
+}
+
 #define IMAGE_FLAGS							\
     (FAST_PATH_STANDARD_FLAGS | FAST_PATH_ID_TRANSFORM |		\
      FAST_PATH_BITS_IMAGE | FAST_PATH_SAMPLES_COVER_CLIP_NEAREST)
@@ -3147,6 +3190,9 @@ static const pixman_iter_info_t vmx_iters[] =
 {
     { PIXMAN_x8r8g8b8, IMAGE_FLAGS, ITER_NARROW,
       _pixman_iter_init_bits_stride, vmx_fetch_x8r8g8b8, NULL
+    },
+    { PIXMAN_a8, IMAGE_FLAGS, ITER_NARROW,
+      _pixman_iter_init_bits_stride, vmx_fetch_a8, NULL
     },
     { PIXMAN_null },
 };
