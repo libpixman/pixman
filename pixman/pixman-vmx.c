@@ -169,33 +169,29 @@ over (vector unsigned int src,
     mask ## _mask = vec_lvsl (0, mask);					\
     source ## _mask = vec_lvsl (0, source);
 
-/* notice you have to declare temp vars...
- * Note: tmp3 and tmp4 must remain untouched!
- */
+#define LOAD_VECTOR(source)				  \
+do							  \
+{							  \
+    vector unsigned char tmp1, tmp2;			  \
+    tmp1 = (typeof(tmp1))vec_ld (0, source);		  \
+    tmp2 = (typeof(tmp2))vec_ld (15, source);		  \
+    v ## source = (typeof(v ## source)) 		  \
+	vec_perm (tmp1, tmp2, source ## _mask);		  \
+} while (0)
 
 #define LOAD_VECTORS(dest, source)			  \
-do {							  \
-    vector unsigned char tmp1, tmp2;			  \
-    tmp1 = (typeof(tmp1))vec_ld (0, source);		  \
-    tmp2 = (typeof(tmp2))vec_ld (15, source);		  \
-    v ## source = (typeof(v ## source))			  \
-	vec_perm (tmp1, tmp2, source ## _mask);		  \
+do							  \
+{							  \
+    LOAD_VECTOR(source);				  \
     v ## dest = (typeof(v ## dest))vec_ld (0, dest);	  \
-} while (0);
+} while (0)
 
 #define LOAD_VECTORSC(dest, source, mask)		  \
-do {							  \
-    vector unsigned char tmp1, tmp2;			  \
-    tmp1 = (typeof(tmp1))vec_ld (0, source);		  \
-    tmp2 = (typeof(tmp2))vec_ld (15, source);		  \
-    v ## source = (typeof(v ## source))			  \
-	vec_perm (tmp1, tmp2, source ## _mask);		  \
-    tmp1 = (typeof(tmp1))vec_ld (0, mask);		  \
-    v ## dest = (typeof(v ## dest))vec_ld (0, dest);	  \
-    tmp2 = (typeof(tmp2))vec_ld (15, mask);		  \
-    v ## mask = (typeof(v ## mask))			  \
-    vec_perm (tmp1, tmp2, mask ## _mask);		  \
-} while (0);
+do							  \
+{							  \
+    LOAD_VECTORS(dest, source); 			  \
+    LOAD_VECTOR(mask);					  \
+} while (0)
 
 #define DECLARE_SRC_MASK_VAR vector unsigned char src_mask
 #define DECLARE_MASK_MASK_VAR vector unsigned char mask_mask
@@ -213,14 +209,16 @@ do {							  \
 
 #define COMPUTE_SHIFT_MASKC(dest, source, mask)
 
+# define LOAD_VECTOR(source)				\
+    v ## source = *((typeof(v ## source)*)source);
+
 # define LOAD_VECTORS(dest, source)			\
-    v ## source = *((typeof(v ## source)*)source);	\
-    v ## dest = *((typeof(v ## dest)*)dest);
+    LOAD_VECTOR(source);				\
+    LOAD_VECTOR(dest);					\
 
 # define LOAD_VECTORSC(dest, source, mask)		\
-    v ## source = *((typeof(v ## source)*)source);	\
-    v ## dest = *((typeof(v ## dest)*)dest);		\
-    v ## mask = *((typeof(v ## mask)*)mask);
+    LOAD_VECTORS(dest, source); 			\
+    LOAD_VECTOR(mask);					\
 
 #define DECLARE_SRC_MASK_VAR
 #define DECLARE_MASK_MASK_VAR
@@ -228,7 +226,7 @@ do {							  \
 #endif /* WORDS_BIGENDIAN */
 
 #define LOAD_VECTORSM(dest, source, mask)				\
-    LOAD_VECTORSC (dest, source, mask)					\
+    LOAD_VECTORSC (dest, source, mask); 				\
     v ## source = pix_multiply (v ## source,				\
                                 splat_alpha (v ## mask));
 
