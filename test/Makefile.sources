@@ -26,6 +26,7 @@ TESTPROGRAMS =			      \
 	glyph-test		      \
 	solid-test		      \
 	stress-test		      \
+	cover-test		      \
 	blitters-test		      \
 	affine-test		      \
 	scaling-test		      \
