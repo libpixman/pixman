@@ -2628,6 +2628,58 @@ vmx_composite_src_x888_8888 (pixman_implementation_t *imp,
 }
 
 static void
+vmx_composite_over_n_8888 (pixman_implementation_t *imp,
+                           pixman_composite_info_t *info)
+{
+    PIXMAN_COMPOSITE_ARGS (info);
+    uint32_t *dst_line, *dst;
+    uint32_t src, ia;
+    int      i, w, dst_stride;
+    vector unsigned int vdst, vsrc, via;
+
+    src = _pixman_image_get_solid (imp, src_image, dest_image->bits.format);
+
+    if (src == 0)
+	return;
+
+    PIXMAN_IMAGE_GET_LINE (
+	dest_image, dest_x, dest_y, uint32_t, dst_stride, dst_line, 1);
+
+    vsrc = (vector unsigned int){src, src, src, src};
+    via = negate (splat_alpha (vsrc));
+    ia = ALPHA_8 (~src);
+
+    while (height--)
+    {
+	dst = dst_line;
+	dst_line += dst_stride;
+	w = width;
+
+	while (w && ((uintptr_t)dst & 15))
+	{
+	    uint32_t d = *dst;
+	    UN8x4_MUL_UN8_ADD_UN8x4 (d, ia, src);
+	    *dst++ = d;
+	    w--;
+	}
+
+	for (i = w / 4; i > 0; i--)
+	{
+	    vdst = pix_multiply (load_128_aligned (dst), via);
+	    save_128_aligned (dst, pix_add (vsrc, vdst));
+	    dst += 4;
+	}
+
+	for (i = w % 4; --i >= 0;)
+	{
+	    uint32_t d = dst[i];
+	    UN8x4_MUL_UN8_ADD_UN8x4 (d, ia, src);
+	    dst[i] = d;
+	}
+    }
+}
+
+static void
 vmx_composite_over_8888_8888 (pixman_implementation_t *imp,
                                pixman_composite_info_t *info)
 {
@@ -2936,6 +2988,8 @@ FAST_NEAREST_MAINLOOP (vmx_8888_8888_normal_OVER,
 
 static const pixman_fast_path_t vmx_fast_paths[] =
 {
+    PIXMAN_STD_FAST_PATH (OVER, solid,    null, a8r8g8b8, vmx_composite_over_n_8888),
+    PIXMAN_STD_FAST_PATH (OVER, solid,    null, x8r8g8b8, vmx_composite_over_n_8888),
     PIXMAN_STD_FAST_PATH (OVER, a8r8g8b8, null, a8r8g8b8, vmx_composite_over_8888_8888),
     PIXMAN_STD_FAST_PATH (OVER, a8r8g8b8, null, x8r8g8b8, vmx_composite_over_8888_8888),
     PIXMAN_STD_FAST_PATH (OVER, a8b8g8r8, null, a8b8g8r8, vmx_composite_over_8888_8888),
