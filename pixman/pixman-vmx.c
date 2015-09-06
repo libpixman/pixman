@@ -623,10 +623,9 @@ in_over_2x128 (vector unsigned int* src_lo,
 static force_inline uint32_t
 core_combine_over_u_pixel_vmx (uint32_t src, uint32_t dst)
 {
-    uint8_t a;
-    vector unsigned int vmxs;
+    uint32_t a;
 
-    a = src >> 24;
+    a = ALPHA_8(src);
 
     if (a == 0xff)
     {
@@ -634,9 +633,7 @@ core_combine_over_u_pixel_vmx (uint32_t src, uint32_t dst)
     }
     else if (src)
     {
-	vmxs = unpack_32_1x128 (src);
-	return pack_1x128_32(
-		over(vmxs, expand_alpha_1x128 (vmxs), unpack_32_1x128 (dst)));
+	UN8x4_MUL_UN8_ADD_UN8x4(dst, (~a & MASK), src);
     }
 
     return dst;
@@ -648,17 +645,7 @@ combine1 (const uint32_t *ps, const uint32_t *pm)
     uint32_t s = *ps;
 
     if (pm)
-    {
-	vector unsigned int ms, mm;
-
-	mm = unpack_32_1x128 (*pm);
-	mm = expand_alpha_1x128 (mm);
-
-	ms = unpack_32_1x128 (s);
-	ms = pix_multiply (ms, mm);
-
-	s = pack_1x128_32 (ms);
-    }
+	UN8x4_MUL_UN8(s, ALPHA_8(*pm));
 
     return s;
 }
@@ -666,38 +653,22 @@ combine1 (const uint32_t *ps, const uint32_t *pm)
 static force_inline vector unsigned int
 combine4 (const uint32_t* ps, const uint32_t* pm)
 {
-    vector unsigned int vmx_src_lo, vmx_src_hi;
-    vector unsigned int vmx_msk_lo, vmx_msk_hi;
-    vector unsigned int s;
+    vector unsigned int src, msk;
 
     if (pm)
     {
-	vmx_msk_lo = load_128_unaligned(pm);
+	msk = load_128_unaligned(pm);
 
-	if (is_transparent(vmx_msk_lo))
+	if (is_transparent(msk))
 	    return (vector unsigned int) AVV(0);
     }
 
-    s = load_128_unaligned(ps);
+    src = load_128_unaligned(ps);
 
     if (pm)
-    {
-	unpack_128_2x128(s, (vector unsigned int) AVV(0),
-			    &vmx_src_lo, &vmx_src_hi);
+	src = pix_multiply(src, msk);
 
-	unpack_128_2x128(vmx_msk_lo, (vector unsigned int) AVV(0),
-			    &vmx_msk_lo, &vmx_msk_hi);
-
-	expand_alpha_2x128(vmx_msk_lo, vmx_msk_hi, &vmx_msk_lo, &vmx_msk_hi);
-
-	pix_multiply_2x128(&vmx_src_lo, &vmx_src_hi,
-			   &vmx_msk_lo, &vmx_msk_hi,
-			   &vmx_src_lo, &vmx_src_hi);
-
-	s = pack_2x128_128(vmx_src_lo, vmx_src_hi);
-    }
-
-    return s;
+    return src;
 }
 
 static void
@@ -2966,9 +2937,7 @@ scaled_nearest_scanline_vmx_8888_8888_OVER (uint32_t*       pd,
     uint32_t s, d;
     const uint32_t* pm = NULL;
 
-    vector unsigned int vmx_dst_lo, vmx_dst_hi;
-    vector unsigned int vmx_src_lo, vmx_src_hi;
-    vector unsigned int vmx_alpha_lo, vmx_alpha_hi;
+    vector unsigned int vsrc, vdst;
 
     if (fully_transparent_src)
 	return;
@@ -3015,31 +2984,17 @@ scaled_nearest_scanline_vmx_8888_8888_OVER (uint32_t*       pd,
 	tmp[2] = tmp3;
 	tmp[3] = tmp4;
 
-	vmx_src_hi = combine4 ((const uint32_t *) &tmp, pm);
+	vsrc = combine4 ((const uint32_t *) &tmp, pm);
 
-	if (is_opaque (vmx_src_hi))
+	if (is_opaque (vsrc))
 	{
-	    save_128_aligned (pd, vmx_src_hi);
+	    save_128_aligned (pd, vsrc);
 	}
-	else if (!is_zero (vmx_src_hi))
+	else if (!is_zero (vsrc))
 	{
-	    vmx_dst_hi = load_128_aligned (pd);
+	    vdst = over(vsrc, splat_alpha(vsrc), load_128_aligned (pd));
 
-	    unpack_128_2x128 (vmx_src_hi, (vector unsigned int) AVV(0),
-				&vmx_src_lo, &vmx_src_hi);
-
-	    unpack_128_2x128 (vmx_dst_hi, (vector unsigned int) AVV(0),
-				&vmx_dst_lo, &vmx_dst_hi);
-
-	    expand_alpha_2x128 (
-		vmx_src_lo, vmx_src_hi, &vmx_alpha_lo, &vmx_alpha_hi);
-
-	    over_2x128 (&vmx_src_lo, &vmx_src_hi,
-			&vmx_alpha_lo, &vmx_alpha_hi,
-			&vmx_dst_lo, &vmx_dst_hi);
-
-	    /* rebuid the 4 pixel data and save*/
-	    save_128_aligned (pd, pack_2x128_128 (vmx_dst_lo, vmx_dst_hi));
+	    save_128_aligned (pd, vdst);
 	}
 
 	w -= 4;
