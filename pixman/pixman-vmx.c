@@ -35,7 +35,6 @@
 
 #define AVV(x...) {x}
 
-static vector unsigned int mask_00ff;
 static vector unsigned int mask_ff000000;
 static vector unsigned int mask_red;
 static vector unsigned int mask_green;
@@ -280,20 +279,6 @@ save_128_aligned (uint32_t* data,
 }
 
 static force_inline vector unsigned int
-create_mask_16_128 (uint16_t mask)
-{
-    uint16_t* src;
-    vector unsigned short vsrc;
-    DECLARE_SRC_MASK_VAR;
-
-    src = &mask;
-
-    COMPUTE_SHIFT_MASK (src);
-    LOAD_VECTOR (src);
-    return (vector unsigned int) vec_splat(vsrc, 0);
-}
-
-static force_inline vector unsigned int
 create_mask_1x32_128 (const uint32_t *src)
 {
     vector unsigned int vsrc;
@@ -308,24 +293,6 @@ static force_inline vector unsigned int
 create_mask_32_128 (uint32_t mask)
 {
     return create_mask_1x32_128(&mask);
-}
-
-static force_inline vector unsigned int
-unpack_32_1x128 (uint32_t data)
-{
-    vector unsigned int vdata = {0, 0, 0, data};
-    vector unsigned short lo;
-
-    lo = (vector unsigned short)
-#ifdef WORDS_BIGENDIAN
-	vec_mergel ((vector unsigned char) AVV(0),
-		    (vector unsigned char) vdata);
-#else
-	vec_mergel ((vector unsigned char) vdata,
-		    (vector unsigned char) AVV(0));
-#endif
-
-    return (vector unsigned int) lo;
 }
 
 static force_inline vector unsigned int
@@ -437,38 +404,6 @@ unpack_565_to_8888 (vector unsigned int lo)
     return vec_or (rb, g);
 }
 
-static force_inline uint32_t
-pack_1x128_32 (vector unsigned int data)
-{
-    vector unsigned char vpack;
-
-    vpack = vec_packsu((vector unsigned short) data,
-			(vector unsigned short) AVV(0));
-
-    return vec_extract((vector unsigned int) vpack, 1);
-}
-
-static force_inline vector unsigned int
-pack_2x128_128 (vector unsigned int lo, vector unsigned int hi)
-{
-    vector unsigned char vpack;
-
-    vpack = vec_packsu((vector unsigned short) hi,
-			(vector unsigned short) lo);
-
-    return (vector unsigned int) vpack;
-}
-
-static force_inline void
-negate_2x128 (vector unsigned int  data_lo,
-	      vector unsigned int  data_hi,
-	      vector unsigned int* neg_lo,
-	      vector unsigned int* neg_hi)
-{
-    *neg_lo = vec_xor (data_lo, mask_00ff);
-    *neg_hi = vec_xor (data_hi, mask_00ff);
-}
-
 static force_inline int
 is_opaque (vector unsigned int x)
 {
@@ -497,136 +432,6 @@ is_transparent (vector unsigned int x)
 
     cmp_result = vec_all_eq(x, (vector unsigned int) AVV(0));
     return (cmp_result & 0x8888) == 0x8888;
-}
-
-static force_inline vector unsigned int
-expand_pixel_8_1x128 (uint8_t data)
-{
-    vector unsigned int vdata;
-
-    vdata = unpack_32_1x128 ((uint32_t) data);
-
-#ifdef WORDS_BIGENDIAN
-    return vec_perm (vdata, vdata,
-		     (vector unsigned char)AVV (
-			 0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07,
-			 0x0E, 0x0F, 0x0E, 0x0F, 0x0E, 0x0F, 0x0E, 0x0F));
-#else
-    return vec_perm (vdata, vdata,
-		     (vector unsigned char)AVV (
-			 0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07,
-			 0x08, 0x09, 0x08, 0x09, 0x08, 0x09, 0x08, 0x09));
-#endif
-}
-
-static force_inline vector unsigned int
-expand_alpha_1x128 (vector unsigned int data)
-{
-#ifdef WORDS_BIGENDIAN
-    return vec_perm (data, data,
-		     (vector unsigned char)AVV (
-			 0x00, 0x01, 0x00, 0x01, 0x00, 0x01, 0x00, 0x01,
-			 0x08, 0x09, 0x08, 0x09, 0x08, 0x09, 0x08, 0x09));
-#else
-    return vec_perm (data, data,
-		     (vector unsigned char)AVV (
-			 0x06, 0x07, 0x06, 0x07, 0x06, 0x07, 0x06, 0x07,
-			 0x0E, 0x0F, 0x0E, 0x0F, 0x0E, 0x0F, 0x0E, 0x0F));
-#endif
-}
-
-static force_inline void
-expand_alpha_2x128 (vector unsigned int  data_lo,
-		    vector unsigned int  data_hi,
-		    vector unsigned int* alpha_lo,
-		    vector unsigned int* alpha_hi)
-{
-
-    *alpha_lo = expand_alpha_1x128(data_lo);
-    *alpha_hi = expand_alpha_1x128(data_hi);
-}
-
-static force_inline void
-expand_alpha_rev_2x128 (vector unsigned int  data_lo,
-			vector unsigned int  data_hi,
-			vector unsigned int* alpha_lo,
-			vector unsigned int* alpha_hi)
-{
-#ifdef WORDS_BIGENDIAN
-    *alpha_lo = vec_perm (data_lo, data_lo,
-		     (vector unsigned char)AVV (
-			 0x06, 0x07, 0x06, 0x07, 0x06, 0x07, 0x06, 0x07,
-			 0x0E, 0x0F, 0x0E, 0x0F, 0x0E, 0x0F, 0x0E, 0x0F));
-
-    *alpha_hi = vec_perm (data_hi, data_hi,
-		     (vector unsigned char)AVV (
-			 0x06, 0x07, 0x06, 0x07, 0x06, 0x07, 0x06, 0x07,
-			 0x0E, 0x0F, 0x0E, 0x0F, 0x0E, 0x0F, 0x0E, 0x0F));
-#else
-    *alpha_lo = vec_perm (data_lo, data_lo,
-		     (vector unsigned char)AVV (
-			 0x00, 0x01, 0x00, 0x01, 0x00, 0x01, 0x00, 0x01,
-			 0x08, 0x09, 0x08, 0x09, 0x08, 0x09, 0x08, 0x09));
-
-    *alpha_hi = vec_perm (data_hi, data_hi,
-		     (vector unsigned char)AVV (
-			 0x00, 0x01, 0x00, 0x01, 0x00, 0x01, 0x00, 0x01,
-			 0x08, 0x09, 0x08, 0x09, 0x08, 0x09, 0x08, 0x09));
-#endif
-}
-
-static force_inline void
-pix_multiply_2x128 (vector unsigned int* data_lo,
-		    vector unsigned int* data_hi,
-		    vector unsigned int* alpha_lo,
-		    vector unsigned int* alpha_hi,
-		    vector unsigned int* ret_lo,
-		    vector unsigned int* ret_hi)
-{
-    *ret_lo = pix_multiply(*data_lo, *alpha_lo);
-    *ret_hi = pix_multiply(*data_hi, *alpha_hi);
-}
-
-static force_inline void
-over_2x128 (vector unsigned int* src_lo,
-	    vector unsigned int* src_hi,
-	    vector unsigned int* alpha_lo,
-	    vector unsigned int* alpha_hi,
-	    vector unsigned int* dst_lo,
-	    vector unsigned int* dst_hi)
-{
-    vector unsigned int t1, t2;
-
-    negate_2x128 (*alpha_lo, *alpha_hi, &t1, &t2);
-
-    pix_multiply_2x128 (dst_lo, dst_hi, &t1, &t2, dst_lo, dst_hi);
-
-    *dst_lo = (vector unsigned int)
-		    vec_adds ((vector unsigned char) *src_lo,
-			      (vector unsigned char) *dst_lo);
-
-    *dst_hi = (vector unsigned int)
-		    vec_adds ((vector unsigned char) *src_hi,
-			      (vector unsigned char) *dst_hi);
-}
-
-static force_inline void
-in_over_2x128 (vector unsigned int* src_lo,
-	       vector unsigned int* src_hi,
-	       vector unsigned int* alpha_lo,
-	       vector unsigned int* alpha_hi,
-	       vector unsigned int* mask_lo,
-	       vector unsigned int* mask_hi,
-	       vector unsigned int* dst_lo,
-	       vector unsigned int* dst_hi)
-{
-    vector unsigned int s_lo, s_hi;
-    vector unsigned int a_lo, a_hi;
-
-    pix_multiply_2x128 (src_lo,   src_hi, mask_lo, mask_hi, &s_lo, &s_hi);
-    pix_multiply_2x128 (alpha_lo, alpha_hi, mask_lo, mask_hi, &a_lo, &a_hi);
-
-    over_2x128 (&s_lo, &s_hi, &a_lo, &a_hi, dst_lo, dst_hi);
 }
 
 static force_inline uint32_t
@@ -3259,7 +3064,6 @@ _pixman_implementation_create_vmx (pixman_implementation_t *fallback)
     pixman_implementation_t *imp = _pixman_implementation_create (fallback, vmx_fast_paths);
 
     /* VMX constants */
-    mask_00ff = create_mask_16_128 (0x00ff);
     mask_ff000000 = create_mask_32_128 (0xff000000);
     mask_red   = create_mask_32_128 (0x00f80000);
     mask_green = create_mask_32_128 (0x0000fc00);
