@@ -382,6 +382,15 @@ typedef struct
 
 #if FENCE_MALLOC_ACTIVE
 
+unsigned long
+fence_get_page_size ()
+{
+    /* You can fake a page size here, if you want to test e.g. 64 kB
+     * pages on a 4 kB page system. Just put a multiplier below.
+     */
+    return getpagesize ();
+}
+
 /* This is apparently necessary on at least OS X */
 #ifndef MAP_ANONYMOUS
 #define MAP_ANONYMOUS MAP_ANON
@@ -390,7 +399,7 @@ typedef struct
 void *
 fence_malloc (int64_t len)
 {
-    unsigned long page_size = getpagesize();
+    unsigned long page_size = fence_get_page_size ();
     unsigned long page_mask = page_size - 1;
     uint32_t n_payload_bytes = (len + page_mask) & ~page_mask;
     uint32_t n_bytes =
@@ -439,7 +448,7 @@ fence_malloc (int64_t len)
 void
 fence_free (void *data)
 {
-    uint32_t page_size = getpagesize();
+    uint32_t page_size = fence_get_page_size ();
     uint8_t *payload = data;
     uint8_t *leading_protected = payload - N_LEADING_PROTECTED * page_size;
     uint8_t *initial_page = leading_protected - page_size;
@@ -472,7 +481,7 @@ fence_image_create_bits (pixman_format_code_t format,
                          int height,
                          pixman_bool_t stride_fence)
 {
-    unsigned page_size = getpagesize();
+    unsigned page_size = fence_get_page_size ();
     unsigned page_mask = page_size - 1;
     unsigned bitspp = PIXMAN_FORMAT_BPP (format);
     unsigned bits_boundary;
@@ -563,6 +572,12 @@ fence_image_create_bits (pixman_format_code_t format,
     /* Implicitly allocated storage does not need a destroy function
      * to get freed on refcount hitting zero.
      */
+}
+
+unsigned long
+fence_get_page_size ()
+{
+    return 0;
 }
 
 #endif /* FENCE_MALLOC_ACTIVE */

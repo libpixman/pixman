@@ -112,6 +112,10 @@ fence_image_create_bits (pixman_format_code_t format,
                          int height,
                          pixman_bool_t stride_fence);
 
+/* Return the page size if FENCE_MALLOC_ACTIVE, or zero otherwise */
+unsigned long
+fence_get_page_size ();
+
 /* Generate n_bytes random bytes in fence_malloced memory */
 uint8_t *
 make_random_bytes (int n_bytes);
