@@ -559,7 +559,7 @@ fence_image_create_bits (pixman_format_code_t format,
                          int height,
                          pixman_bool_t stride_fence)
 {
-    return pixman_image_create_bits (format, width, height, NULL, 0);
+    return pixman_image_create_bits (format, min_width, height, NULL, 0);
     /* Implicitly allocated storage does not need a destroy function
      * to get freed on refcount hitting zero.
      */
