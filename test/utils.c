@@ -966,7 +966,9 @@ enable_divbyzero_exceptions (void)
 {
 #ifdef HAVE_FENV_H
 #ifdef HAVE_FEENABLEEXCEPT
+#ifdef HAVE_FEDIVBYZERO
     feenableexcept (FE_DIVBYZERO);
+#endif
 #endif
 #endif
 }
