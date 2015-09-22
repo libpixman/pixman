@@ -158,9 +158,9 @@ general_composite_rect  (pixman_implementation_t *imp,
     if (width <= 0 || _pixman_multiply_overflows_int (width, Bpp * 3))
 	return;
 
-    if (width * Bpp * 3 > sizeof (stack_scanline_buffer) - 32 * 3)
+    if (width * Bpp * 3 > sizeof (stack_scanline_buffer) - 15 * 3)
     {
-	scanline_buffer = pixman_malloc_ab_plus_c (width, Bpp * 3, 32 * 3);
+	scanline_buffer = pixman_malloc_ab_plus_c (width, Bpp * 3, 15 * 3);
 
 	if (!scanline_buffer)
 	    return;
