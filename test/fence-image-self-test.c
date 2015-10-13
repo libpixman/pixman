@@ -73,7 +73,7 @@ prinfo (const char *fmt, ...)
 }
 
 static void
-do_expect_segv (void (*fn)(void *), void *data)
+do_expect_signal (void (*fn)(void *), void *data)
 {
     struct sigaction sa;
 
@@ -81,6 +81,8 @@ do_expect_segv (void (*fn)(void *), void *data)
     sigemptyset (&sa.sa_mask);
     sa.sa_sigaction = segv_handler;
     if (sigaction (SIGSEGV, &sa, NULL) == -1)
+        die ("sigaction failed", errno);
+    if (sigaction (SIGBUS, &sa, NULL) == -1)
         die ("sigaction failed", errno);
 
     (*fn)(data);
@@ -96,7 +98,7 @@ do_expect_segv (void (*fn)(void *), void *data)
  * to exit with success, and return failure otherwise.
  */
 static pixman_bool_t
-expect_segv (void (*fn)(void *), void *data)
+expect_signal (void (*fn)(void *), void *data)
 {
     pid_t pid, wp;
     int status;
@@ -106,7 +108,7 @@ expect_segv (void (*fn)(void *), void *data)
         die ("fork failed", errno);
 
     if (pid == 0)
-        do_expect_segv (fn, data); /* never returns */
+        do_expect_signal (fn, data); /* never returns */
 
     wp = waitpid (pid, &status, 0);
     if (wp != pid)
@@ -131,9 +133,9 @@ test_read_fault (uint8_t *p, int offset)
 {
     prinfo ("*(uint8_t *)(%p + %d)", p, offset);
 
-    if (expect_segv (read_u8, p + offset))
+    if (expect_signal (read_u8, p + offset))
     {
-        prinfo ("\tSEGV OK\n");
+        prinfo ("\tsignal OK\n");
 
         return TRUE;
     }

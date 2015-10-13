@@ -471,9 +471,9 @@ fence_image_destroy (pixman_image_t *image, void *data)
  * min_width is only a minimum width for the image. The width is aligned up
  * for the row size to be divisible by both page size and pixel size.
  *
- * If stride_fence is true, the additional page on each row will be armed
- * to cause SIGSEVG on all accesses. This should catch all accesses outside
- * the valid row pixels.
+ * If stride_fence is true, the additional page on each row will be
+ * armed to cause SIGSEGV or SIGBUS on all accesses. This should catch
+ * all accesses outside the valid row pixels.
  */
 pixman_image_t *
 fence_image_create_bits (pixman_format_code_t format,
