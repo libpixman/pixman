@@ -429,10 +429,11 @@ AC_COMPILE_IFELSE([AC_LANG_SOURCE([[
 #include <mmintrin.h>
 #include <xmmintrin.h>
 #include <emmintrin.h>
+int param;
 int main () {
-    __m128i a = _mm_set1_epi32 (0), b = _mm_set1_epi32 (0), c;
+    __m128i a = _mm_set1_epi32 (param), b = _mm_set1_epi32 (param + 1), c;
 	c = _mm_xor_si128 (a, b);
-    return 0;
+    return _mm_cvtsi128_si32(c);
 }]])], have_sse2_intrinsics=yes)
 CFLAGS=$xserver_save_CFLAGS
 
@@ -473,10 +474,11 @@ AC_COMPILE_IFELSE([AC_LANG_SOURCE([[
 #include <xmmintrin.h>
 #include <emmintrin.h>
 #include <tmmintrin.h>
+int param;
 int main () {
-    __m128i a = _mm_set1_epi32 (0), b = _mm_set1_epi32 (0), c;
+    __m128i a = _mm_set1_epi32 (param), b = _mm_set1_epi32 (param + 1), c;
     c = _mm_maddubs_epi16 (a, b);
-    return 0;
+    return _mm_cvtsi128_si32(c);
 }]])], have_ssse3_intrinsics=yes)
 CFLAGS=$xserver_save_CFLAGS
 
