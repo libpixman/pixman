@@ -45,9 +45,10 @@ endif
 endif
 endif
 
+$(CFG_VAR):
+	@mkdir $@
 
-$(CFG_VAR)/%.obj: %.c $(libpixman_headers)
-	@mkdir -p $(CFG_VAR)
+$(CFG_VAR)/%.obj: %.c $(libpixman_headers) | $(CFG_VAR)
 	@$(CC) -c $(PIXMAN_CFLAGS) -Fo"$@" $<
 
 clean: inform
