@@ -51,6 +51,6 @@ $(CFG_VAR)/%.obj: %.c $(libpixman_headers)
 	@$(CC) -c $(PIXMAN_CFLAGS) -Fo"$@" $<
 
 clean: inform
-	@$(RM) $(CFG_VAR)/*.{exe,ilk,lib,obj,pdb} $(BUILT_SOURCES) || exit 0
+	@$(RM) $(CFG_VAR)/*.{exe,ilk,lib,obj,pdb} || exit 0
 
 .PHONY: inform clean
