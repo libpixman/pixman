@@ -19,26 +19,35 @@ OTHERS  = $(patsubst %,   $(CFG_VAR)/%.exe, $(OTHERPROGRAMS))
 all: inform $(TESTS) $(OTHERS)
 
 check: inform $(TESTS)
-	@failures=0 ; \
-	total=0 ; \
+	@total=0 ; \
+	pass=0 ; \
+	skip=0 ; \
+	fail=0 ; \
 	for test in $(TESTS) ; \
 	do \
 		total=`expr $$total + 1` ; \
-		if ./$$test ; \
+		./$$test ; \
+		r=$$? ; \
+		if test $$r -eq 0 ; \
 		then echo "PASS: $$test" ; \
+		    pass=`expr $$pass + 1` ; \
+		elif test $$r -eq 77 ; \
+		then echo "SKIP: $$test" ; \
+		    skip=`expr $$skip + 1` ; \
 		else echo "FAIL: $$test" ; \
-		     failures=`expr $$failures + 1` ; \
+		    fail=`expr $$fail + 1` ; \
 		fi ; \
 	done ; \
-	if test $$failures -eq 0 ; \
-	then banner="All $$total tests passed" ; \
-	else banner="$$failures of $$total tests failed" ; \
-	fi ; \
-	dashes=`echo "$$banner" | sed s/./=/g`; \
+	dashes="============================================================================" ; \
 	echo "$$dashes" ; \
-	echo "$$banner" ; \
+	echo "Testsuite summary for pixman:" ; \
 	echo "$$dashes" ; \
-	test $$failures -eq 0
+	echo "# TOTAL: $$total" ; \
+	echo "# PASS:  $$pass" ; \
+	echo "# SKIP:  $$skip" ; \
+	echo "# FAIL:  $$fail" ; \
+	echo "$$dashes" ; \
+	test $$fail -eq 0
 
 $(CFG_VAR)/libutils.lib: $(libutils_OBJECTS)
 	@$(AR) $(PIXMAN_ARFLAGS) -OUT:$@ $^
