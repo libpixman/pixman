@@ -247,7 +247,7 @@ create_1d_filter (int              width,
         double frac = step / 2.0 + i * step;
 	pixman_fixed_t new_total;
         int x, x1, x2;
-	double total;
+	double total, e;
 
 	/* Sample convolution of reconstruction and sampling
 	 * filter. See rounding.txt regarding the rounding
@@ -278,24 +278,31 @@ create_1d_filter (int              width,
 			      ihigh - ilow);
 	    }
 
-	    total += c;
-            *p++ = (pixman_fixed_t)(c * 65536.0 + 0.5);
+            *p = (pixman_fixed_t)floor (c * 65536.0 + 0.5);
+	    total += *p;
+	    p++;
         }
 
-	/* Normalize */
+	/* Normalize, with error diffusion */
 	p -= width;
-        total = 1 / total;
+        total = 65536.0 / total;
         new_total = 0;
+	e = 0.0;
 	for (x = x1; x < x2; ++x)
 	{
-	    pixman_fixed_t t = (*p) * total + 0.5;
+	    double v = (*p) * total + e;
+	    pixman_fixed_t t = floor (v + 0.5);
 
+	    e = v - t;
 	    new_total += t;
 	    *p++ = t;
 	}
 
-	if (new_total != pixman_fixed_1)
-	    *(p - width / 2) += (pixman_fixed_1 - new_total);
+	/* pixman_fixed_e's worth of error may remain; put it
+	 * at the first sample, since that is the only one that
+	 * hasn't had any error diffused into it.
+	 */
+	*(p - width) += pixman_fixed_1 - new_total;
     }
 }
 
