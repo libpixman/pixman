@@ -217,24 +217,16 @@ integral (pixman_kernel_t kernel1, double x1,
     }
 }
 
-static pixman_fixed_t *
-create_1d_filter (int             *width,
+static void
+create_1d_filter (int              width,
 		  pixman_kernel_t  reconstruct,
 		  pixman_kernel_t  sample,
 		  double           scale,
-		  int              n_phases)
+		  int              n_phases,
+		  pixman_fixed_t *p)
 {
-    pixman_fixed_t *params, *p;
     double step;
-    double size;
     int i;
-
-    size = scale * filters[sample].width + filters[reconstruct].width;
-    *width = ceil (size);
-
-    p = params = malloc (*width * n_phases * sizeof (pixman_fixed_t));
-    if (!params)
-        return NULL;
 
     step = 1.0 / n_phases;
 
@@ -250,8 +242,8 @@ create_1d_filter (int             *width,
 	 * and sample positions.
 	 */
 
-	x1 = ceil (frac - *width / 2.0 - 0.5);
-        x2 = x1 + *width;
+	x1 = ceil (frac - width / 2.0 - 0.5);
+	x2 = x1 + width;
 
 	total = 0;
         for (x = x1; x < x2; ++x)
@@ -279,7 +271,7 @@ create_1d_filter (int             *width,
         }
 
 	/* Normalize */
-	p -= *width;
+	p -= width;
         total = 1 / total;
         new_total = 0;
 	for (x = x1; x < x2; ++x)
@@ -291,10 +283,15 @@ create_1d_filter (int             *width,
 	}
 
 	if (new_total != pixman_fixed_1)
-	    *(p - *width / 2) += (pixman_fixed_1 - new_total);
+	    *(p - width / 2) += (pixman_fixed_1 - new_total);
     }
+}
 
-    return params;
+
+static int
+filter_width (pixman_kernel_t reconstruct, pixman_kernel_t sample, double size)
+{
+    return ceil (filters[reconstruct].width + size * filters[sample].width);
 }
 
 #ifdef PIXMAN_GNUPLOT
@@ -426,38 +423,31 @@ pixman_filter_create_separable_convolution (int             *n_values,
 {
     double sx = fabs (pixman_fixed_to_double (scale_x));
     double sy = fabs (pixman_fixed_to_double (scale_y));
-    pixman_fixed_t *horz = NULL, *vert = NULL, *params = NULL;
+    pixman_fixed_t *params;
     int subsample_x, subsample_y;
     int width, height;
 
+    width = filter_width (reconstruct_x, sample_x, sx);
     subsample_x = (1 << subsample_bits_x);
+
+    height = filter_width (reconstruct_y, sample_y, sy);
     subsample_y = (1 << subsample_bits_y);
 
-    horz = create_1d_filter (&width, reconstruct_x, sample_x, sx, subsample_x);
-    vert = create_1d_filter (&height, reconstruct_y, sample_y, sy, subsample_y);
-
-    if (!horz || !vert)
-        goto out;
-    
     *n_values = 4 + width * subsample_x + height * subsample_y;
     
     params = malloc (*n_values * sizeof (pixman_fixed_t));
     if (!params)
-        goto out;
+	return NULL;
 
     params[0] = pixman_int_to_fixed (width);
     params[1] = pixman_int_to_fixed (height);
     params[2] = pixman_int_to_fixed (subsample_bits_x);
     params[3] = pixman_int_to_fixed (subsample_bits_y);
 
-    memcpy (params + 4, horz,
-	    width * subsample_x * sizeof (pixman_fixed_t));
-    memcpy (params + 4 + width * subsample_x, vert,
-	    height * subsample_y * sizeof (pixman_fixed_t));
-
-out:
-    free (horz);
-    free (vert);
+    create_1d_filter (width, reconstruct_x, sample_x, sx, subsample_x,
+		      params + 4);
+    create_1d_filter (height, reconstruct_y, sample_y, sy, subsample_y,
+		      params + 4 + width * subsample_x);
 
 #ifdef PIXMAN_GNUPLOT
     gnuplot_filter(width, subsample_x, params + 4);
