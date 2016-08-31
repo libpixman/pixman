@@ -297,6 +297,119 @@ create_1d_filter (int             *width,
     return params;
 }
 
+#ifdef PIXMAN_GNUPLOT
+
+/* If enable-gnuplot is configured, then you can pipe the output of a
+ * pixman-using program to gnuplot and get a continuously-updated plot
+ * of the horizontal filter. This works well with demos/scale to test
+ * the filter generation.
+ *
+ * The plot is all the different subposition filters shuffled
+ * together. This is misleading in a few cases:
+ *
+ *  IMPULSE.BOX - goes up and down as the subfilters have different
+ *		  numbers of non-zero samples
+ *  IMPULSE.TRIANGLE - somewhat crooked for the same reason
+ *  1-wide filters - looks triangular, but a 1-wide box would be more
+ *		     accurate
+ */
+static void
+gnuplot_filter (int width, int n_phases, const pixman_fixed_t* p)
+{
+    double step;
+    int i, j;
+    int first;
+
+    step = 1.0 / n_phases;
+
+    printf ("set style line 1 lc rgb '#0060ad' lt 1 lw 0.5 pt 7 pi 1 ps 0.5\n");
+    printf ("plot [x=%g:%g] '-' with linespoints ls 1\n", -width*0.5, width*0.5);
+    /* Print a point at the origin so that y==0 line is included: */
+    printf ("0 0\n\n");
+
+    /* The position of the first sample of the phase corresponding to
+     * frac is given by:
+     * 
+     *     ceil (frac - width / 2.0 - 0.5) + 0.5 - frac
+     * 
+     * We have to find the frac that minimizes this expression.
+     * 
+     * For odd widths, we have
+     * 
+     *     ceil (frac - width / 2.0 - 0.5) + 0.5 - frac
+     *   = ceil (frac) + K - frac
+     *   = 1 + K - frac
+     * 
+     * for some K, so this is minimized when frac is maximized and
+     * strictly growing with frac. So for odd widths, we can simply
+     * start at the last phase and go backwards.
+     * 
+     * For even widths, we have
+     * 
+     *     ceil (frac - width / 2.0 - 0.5) + 0.5 - frac
+     *   = ceil (frac - 0.5) + K - frac
+     * 
+     * The graph for this function (ignoring K) looks like this:
+     * 
+     *        0.5
+     *           |    |\ 
+     *           |    | \ 
+     *           |    |  \ 
+     *         0 |    |   \ 
+     *           |\   |
+     *           | \  |
+     *           |  \ |
+     *      -0.5 |   \|
+     *   ---------------------------------
+     *           0    0.5   1
+     * 
+     * So in this case we need to start with the phase whose frac is
+     * less than, but as close as possible to 0.5, then go backwards
+     * until we hit the first phase, then wrap around to the last
+     * phase and continue backwards.
+     * 
+     * Which phase is as close as possible 0.5? The locations of the
+     * sampling point corresponding to the kth phase is given by
+     * 1/(2 * n_phases) + k / n_phases:
+     * 
+     *         1/(2 * n_phases) + k / n_phases = 0.5
+     *  
+     * from which it follows that
+     * 
+     *         k = (n_phases - 1) / 2
+     * 
+     * rounded down is the phase in question.
+     */
+    if (width & 1)
+	first = n_phases - 1;
+    else
+	first = (n_phases - 1) / 2;
+
+    for (j = 0; j < width; ++j)
+    {
+	for (i = 0; i < n_phases; ++i)
+	{
+	    int phase = first - i;
+	    double frac, pos;
+
+	    if (phase < 0)
+		phase = n_phases + phase;
+
+	    frac = step / 2.0 + phase * step;
+	    pos = ceil (frac - width / 2.0 - 0.5) + 0.5 - frac + j;
+
+	    printf ("%g %g\n",
+		    pos,
+		    pixman_fixed_to_double (*(p + phase * width + j)));
+	}
+    }
+
+    printf ("e\n");
+    fflush (stdout);
+}
+
+#endif
+
 /* Create the parameter list for a SEPARABLE_CONVOLUTION filter
  * with the given kernels and scale parameters
  */
@@ -345,6 +458,10 @@ pixman_filter_create_separable_convolution (int             *n_values,
 out:
     free (horz);
     free (vert);
+
+#ifdef PIXMAN_GNUPLOT
+    gnuplot_filter(width, subsample_x, params + 4);
+#endif
 
     return params;
 }
