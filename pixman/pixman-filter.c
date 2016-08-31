@@ -189,13 +189,19 @@ integral (pixman_kernel_t kernel1, double x1,
     }
     else
     {
-	/* Integration via Simpson's rule */
-#define N_SEGMENTS 128
+	/* Integration via Simpson's rule
+	 * See http://www.intmath.com/integration/6-simpsons-rule.php
+	 * 12 segments (6 cubic approximations) seems to produce best
+	 * result for lanczos3.linear, which was the combination that
+	 * showed the most errors.  This makes sense as the lanczos3
+	 * filter is 6 wide.
+	 */
+#define N_SEGMENTS 12
 #define SAMPLE(a1, a2)							\
 	(filters[kernel1].func ((a1)) * filters[kernel2].func ((a2) * scale))
 	
 	double s = 0.0;
-	double h = width / (double)N_SEGMENTS;
+	double h = width / N_SEGMENTS;
 	int i;
 
 	s = SAMPLE (x1, x2);
@@ -204,11 +210,14 @@ integral (pixman_kernel_t kernel1, double x1,
 	{
 	    double a1 = x1 + h * i;
 	    double a2 = x2 + h * i;
+	    s += 4 * SAMPLE (a1, a2);
+	}
 
+	for (i = 2; i < N_SEGMENTS; i += 2)
+	{
+	    double a1 = x1 + h * i;
+	    double a2 = x2 + h * i;
 	    s += 2 * SAMPLE (a1, a2);
-
-	    if (i >= 2 && i < N_SEGMENTS - 1)
-		s += 4 * SAMPLE (a1, a2);
 	}
 
 	s += SAMPLE (x1 + width, x2 + width);
