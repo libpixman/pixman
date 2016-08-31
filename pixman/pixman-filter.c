@@ -109,14 +109,16 @@ general_cubic (double x, double B, double C)
 
     if (ax < 1)
     {
-	return ((12 - 9 * B - 6 * C) * ax * ax * ax +
-		(-18 + 12 * B + 6 * C) * ax * ax + (6 - 2 * B)) / 6;
+	return (((12 - 9 * B - 6 * C) * ax +
+		 (-18 + 12 * B + 6 * C)) * ax * ax +
+		(6 - 2 * B)) / 6;
     }
-    else if (ax >= 1 && ax < 2)
+    else if (ax < 2)
     {
-	return ((-B - 6 * C) * ax * ax * ax +
-		(6 * B + 30 * C) * ax * ax + (-12 * B - 48 * C) *
-		ax + (8 * B + 24 * C)) / 6;
+	return ((((-B - 6 * C) * ax +
+		  (6 * B + 30 * C)) * ax +
+		 (-12 * B - 48 * C)) * ax +
+		(8 * B + 24 * C)) / 6;
     }
     else
     {
