@@ -127,6 +127,13 @@ typedef struct
     int		value;
 } named_int_t;
 
+static const named_int_t filter_types[] =
+{
+    { "Separable",		PIXMAN_FILTER_SEPARABLE_CONVOLUTION },
+    { "Nearest",		PIXMAN_FILTER_NEAREST },
+    { "Bilinear",		PIXMAN_FILTER_BILINEAR },
+};
+
 static const named_int_t filters[] =
 {
     { "Box",			PIXMAN_KERNEL_BOX },
@@ -249,18 +256,29 @@ rescale (GtkWidget *may_be_null, app_t *app)
     pixman_transform_from_pixman_f_transform (&transform, &ftransform);
     pixman_image_set_transform (app->original, &transform);
 
-    params = pixman_filter_create_separable_convolution (
-        &n_params,
-        sx * 65536.0 + 0.5,
-	sy * 65536.0 + 0.5,
-	get_value (app, filters, "reconstruct_x_combo_box"),
-	get_value (app, filters, "reconstruct_y_combo_box"),
-	get_value (app, filters, "sample_x_combo_box"),
-	get_value (app, filters, "sample_y_combo_box"),
-	gtk_adjustment_get_value (app->subsample_adjustment),
-	gtk_adjustment_get_value (app->subsample_adjustment));
+    if (get_value (app, filter_types, "filter_combo_box") ==
+	PIXMAN_FILTER_SEPARABLE_CONVOLUTION)
+    {
+	params = pixman_filter_create_separable_convolution (
+	    &n_params,
+	    sx * 65536.0 + 0.5,
+	    sy * 65536.0 + 0.5,
+	    get_value (app, filters, "reconstruct_x_combo_box"),
+	    get_value (app, filters, "reconstruct_y_combo_box"),
+	    get_value (app, filters, "sample_x_combo_box"),
+	    get_value (app, filters, "sample_y_combo_box"),
+	    gtk_adjustment_get_value (app->subsample_adjustment),
+	    gtk_adjustment_get_value (app->subsample_adjustment));
+    }
+    else
+    {
+	params = 0;
+	n_params = 0;
+    }
 
-    pixman_image_set_filter (app->original, PIXMAN_FILTER_SEPARABLE_CONVOLUTION, params, n_params);
+    pixman_image_set_filter (app->original,
+	get_value (app, filter_types, "filter_combo_box"),
+	params, n_params);
 
     pixman_image_set_repeat (
         app->original, get_value (app, repeats, "repeat_combo_box"));
@@ -402,6 +420,7 @@ app_new (pixman_image_t *original)
     widget = get_widget (app, "drawing_area");
     g_signal_connect (widget, "expose_event", G_CALLBACK (on_expose), app);
 
+    set_up_combo_box (app, "filter_combo_box", G_N_ELEMENTS (filter_types), filter_types);
     set_up_filter_box (app, "reconstruct_x_combo_box");
     set_up_filter_box (app, "reconstruct_y_combo_box");
     set_up_filter_box (app, "sample_x_combo_box");

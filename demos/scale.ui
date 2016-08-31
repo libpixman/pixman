@@ -192,12 +192,23 @@
                     <property name="column_spacing">8</property>
                     <property name="row_spacing">6</property>
                     <child>
+                      <object class="GtkLabel" id="labelF">
+                        <property name="visible">True</property>
+                        <property name="xalign">1</property>
+                        <property name="label" translatable="yes">&lt;b&gt;Filter:&lt;/b&gt;</property>
+                        <property name="use_markup">True</property>
+                      </object>
+                    </child>
+                    <child>
                       <object class="GtkLabel" id="label4">
                         <property name="visible">True</property>
                         <property name="xalign">1</property>
                         <property name="label" translatable="yes">&lt;b&gt;Reconstruct X:&lt;/b&gt;</property>
                         <property name="use_markup">True</property>
                       </object>
+                      <packing>
+                        <property name="top_attach">1</property>
+                      </packing>
                     </child>
                     <child>
                       <object class="GtkLabel" id="label5">
@@ -207,7 +218,7 @@
                         <property name="use_markup">True</property>
                       </object>
                       <packing>
-                        <property name="top_attach">1</property>
+                        <property name="top_attach">2</property>
                       </packing>
                     </child>
                     <child>
@@ -218,7 +229,7 @@
                         <property name="use_markup">True</property>
                       </object>
                       <packing>
-                        <property name="top_attach">2</property>
+                        <property name="top_attach">3</property>
                       </packing>
                     </child>
                     <child>
@@ -229,7 +240,7 @@
                         <property name="use_markup">True</property>
                       </object>
                       <packing>
-                        <property name="top_attach">3</property>
+                        <property name="top_attach">4</property>
                       </packing>
                     </child>
                     <child>
@@ -240,7 +251,7 @@
                         <property name="use_markup">True</property>
                       </object>
                       <packing>
-                        <property name="top_attach">4</property>
+                        <property name="top_attach">5</property>
                       </packing>
                     </child>
                     <child>
@@ -251,7 +262,15 @@
                         <property name="use_markup">True</property>
                       </object>
                       <packing>
-                        <property name="top_attach">5</property>
+                        <property name="top_attach">6</property>
+                      </packing>
+                    </child>
+                    <child>
+                      <object class="GtkComboBox" id="filter_combo_box">
+                        <property name="visible">True</property>
+                      </object>
+                      <packing>
+                        <property name="left_attach">1</property>
                       </packing>
                     </child>
                     <child>
@@ -260,6 +279,7 @@
                       </object>
                       <packing>
                         <property name="left_attach">1</property>
+                        <property name="top_attach">1</property>
                       </packing>
                     </child>
                     <child>
@@ -268,7 +288,7 @@
                       </object>
                       <packing>
                         <property name="left_attach">1</property>
-                        <property name="top_attach">1</property>
+                        <property name="top_attach">2</property>
                       </packing>
                     </child>
                     <child>
@@ -277,7 +297,7 @@
                       </object>
                       <packing>
                         <property name="left_attach">1</property>
-                        <property name="top_attach">2</property>
+                        <property name="top_attach">3</property>
                       </packing>
                     </child>
                     <child>
@@ -286,7 +306,7 @@
                       </object>
                       <packing>
                         <property name="left_attach">1</property>
-                        <property name="top_attach">3</property>
+                        <property name="top_attach">4</property>
                       </packing>
                     </child>
                     <child>
@@ -295,7 +315,7 @@
                       </object>
                       <packing>
                         <property name="left_attach">1</property>
-                        <property name="top_attach">4</property>
+                        <property name="top_attach">5</property>
                       </packing>
                     </child>
                     <child>
@@ -306,7 +326,7 @@
                       </object>
                       <packing>
                         <property name="left_attach">1</property>
-                        <property name="top_attach">5</property>
+                        <property name="top_attach">6</property>
                       </packing>
                     </child>
                   </object>
