@@ -143,7 +143,7 @@ static const filter_info_t filters[] =
     { PIXMAN_KERNEL_BOX,	        box_kernel,       1.0 },
     { PIXMAN_KERNEL_LINEAR,	        linear_kernel,    2.0 },
     { PIXMAN_KERNEL_CUBIC,		cubic_kernel,     4.0 },
-    { PIXMAN_KERNEL_GAUSSIAN,	        gaussian_kernel,  6 * SIGMA },
+    { PIXMAN_KERNEL_GAUSSIAN,	        gaussian_kernel,  5.0 },
     { PIXMAN_KERNEL_LANCZOS2,	        lanczos2_kernel,  4.0 },
     { PIXMAN_KERNEL_LANCZOS3,	        lanczos3_kernel,  6.0 },
     { PIXMAN_KERNEL_LANCZOS3_STRETCHED, nice_kernel,      8.0 },
