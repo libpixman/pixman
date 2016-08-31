@@ -160,11 +160,15 @@ integral (pixman_kernel_t kernel1, double x1,
 	  pixman_kernel_t kernel2, double scale, double x2,
 	  double width)
 {
+    if (kernel1 == PIXMAN_KERNEL_BOX && kernel2 == PIXMAN_KERNEL_BOX)
+    {
+	return width;
+    }
     /* The LINEAR filter is not differentiable at 0, so if the
      * integration interval crosses zero, break it into two
      * separate integrals.
      */
-    if (kernel1 == PIXMAN_KERNEL_LINEAR && x1 < 0 && x1 + width > 0)
+    else if (kernel1 == PIXMAN_KERNEL_LINEAR && x1 < 0 && x1 + width > 0)
     {
 	return
 	    integral (kernel1, x1, kernel2, scale, x2, - x1) +
