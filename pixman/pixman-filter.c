@@ -160,18 +160,17 @@ integral (pixman_kernel_t kernel1, double x1,
 	  pixman_kernel_t kernel2, double scale, double x2,
 	  double width)
 {
-    /* If the integration interval crosses zero, break it into
-     * two separate integrals. This ensures that filters such
-     * as LINEAR that are not differentiable at 0 will still
-     * integrate properly.
+    /* The LINEAR filter is not differentiable at 0, so if the
+     * integration interval crosses zero, break it into two
+     * separate integrals.
      */
-    if (x1 < 0 && x1 + width > 0)
+    if (kernel1 == PIXMAN_KERNEL_LINEAR && x1 < 0 && x1 + width > 0)
     {
 	return
 	    integral (kernel1, x1, kernel2, scale, x2, - x1) +
 	    integral (kernel1, 0, kernel2, scale, x2 - x1, width + x1);
     }
-    else if (x2 < 0 && x2 + width > 0)
+    else if (kernel2 == PIXMAN_KERNEL_LINEAR && x2 < 0 && x2 + width > 0)
     {
 	return
 	    integral (kernel1, x1, kernel2, scale, x2, - x2) +
