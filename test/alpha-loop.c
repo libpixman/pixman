@@ -22,7 +22,7 @@ main (int argc, char **argv)
     d = pixman_image_create_bits (PIXMAN_a8r8g8b8, WIDTH, HEIGHT, dest, WIDTH * 4);
     s = pixman_image_create_bits (PIXMAN_a2r10g10b10, WIDTH, HEIGHT, src, WIDTH * 4);
 
-    fail_after (5, "Infinite loop detected: 5 seconds without progress\n");
+    fail_after (30, "Infinite loop detected: 30 seconds without progress\n");
 
     pixman_image_set_alpha_map (s, a, 0, 0);
     pixman_image_set_alpha_map (a, s, 0, 0);
