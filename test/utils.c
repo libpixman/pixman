@@ -978,7 +978,9 @@ enable_invalid_exceptions (void)
 {
 #ifdef HAVE_FENV_H
 #ifdef HAVE_FEENABLEEXCEPT
+#ifdef HAVE_FEINVALID
     feenableexcept (FE_INVALID);
+#endif
 #endif
 #endif
 }

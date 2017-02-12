@@ -923,6 +923,11 @@ AC_CHECK_DECL([FE_DIVBYZERO],
 	[],
 	[[#include <fenv.h>]])
 
+AC_CHECK_DECL([FE_INVALID],
+	[AC_DEFINE(HAVE_FEINVALID, 1, [Whether we have FE_INVALID])],
+	[],
+	[[#include <fenv.h>]])
+
 AC_CHECK_FUNC(gettimeofday, have_gettimeofday=yes, have_gettimeofday=no)
 AC_CHECK_HEADER(sys/time.h, have_sys_time_h=yes, have_sys_time_h=no)
 if test x$have_gettimeofday = xyes && test x$have_sys_time_h = xyes; then
